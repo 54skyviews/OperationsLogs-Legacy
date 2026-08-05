@@ -38,6 +38,7 @@ var _this = this;
 var operatorSupabase = null;
 var adminSupabase = null;
 var operatorUser = null;
+LegacyDiagnostic.step("auth-complete", "Anonymous session established", "ok", operatorUser && operatorUser.id ? operatorUser.id : "session available");
 var currentDevice = null;
 var adminUser = null;
 var adminAccess = false;
@@ -1303,8 +1304,8 @@ function initializeCloudSync() {
                     return [3 /*break*/, 14];
                 case 13:
                     error_4 = _b.sent();
-                    LegacyDiagnostic.fail("Cloud startup failed", error_2 || error_1 || error);
-                    console.error("Cloud startup failed:", error_4);
+console.error("Cloud startup failed:", error_4);
+                    LegacyDiagnostic.fail("Cloud startup failed", error_4);
                     LegacyDiagnostic.fail("Cloud startup failed", error_4);
                     setSyncStatus(navigator.onLine ? "CLOUD SETUP REQUIRED" : "OFFLINE · LOCAL SAVE", "error");
                     return [3 /*break*/, 14];

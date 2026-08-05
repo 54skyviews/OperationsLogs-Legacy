@@ -73,9 +73,16 @@
     log(error && error.stack ? error.stack : message);
   }
 
+  function redactResponse(text) {
+    if (!text) return text;
+    return String(text)
+      .replace(/("access_token"\s*:\s*")[^"]+(")/g, "$1[REDACTED]$2")
+      .replace(/("refresh_token"\s*:\s*")[^"]+(")/g, "$1[REDACTED]$2");
+  }
+
   function http(method, url, status, responseText) {
     log(method + " " + url + " | HTTP " + status);
-    if (responseText) log("RESPONSE: " + responseText);
+    if (responseText) log("RESPONSE: " + redactResponse(responseText));
   }
 
   global.LegacyDiagnostic = {

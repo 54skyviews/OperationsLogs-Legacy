@@ -342,3 +342,11 @@ Publish it separately from the standard application.
 This build uses direct XMLHttpRequest authentication and records the complete
 HTTP status and response body from Supabase. It also improves formatting of
 JavaScript error objects so diagnostics no longer display only `[object Object]`.
+
+
+## Legacy v1.3.3 Startup Fix
+
+The v1.3.2 test proved that anonymous authentication succeeds on iOS 10.3.4.
+This build removes an invalid diagnostic reference to `error_2`, redacts access
+and refresh tokens from future diagnostics, and allows startup to continue into
+device registration and cloud synchronisation.
