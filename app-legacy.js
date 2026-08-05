@@ -74,6 +74,7 @@ var upper = function (value) { return (value || "").trim().replace(/\s+/g, " ").
 var todayISO = function () { return new Date().toISOString().slice(0, 10); };
 var timeHHMM = function () { return new Date().toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" }).replace(":", ""); };
 function openDb() {
+    LegacyDiagnostic.step("indexeddb", "Opening local database", "working", "");
     return new Promise(function (resolve, reject) {
         var request = indexedDB.open(DB_NAME, DB_VERSION);
         request.onupgradeneeded = function (e) {
@@ -96,7 +97,10 @@ function openDb() {
             }
         };
         request.onsuccess = function (e) { db = e.target.result; resolve(db); };
-        request.onerror = function () { return reject(request.error); };
+        request.onerror = function () {
+            LegacyDiagnostic.fail("IndexedDB failed", request.error || "Unknown IndexedDB error");
+            return reject(request.error);
+        };
     });
 }
 function put(storeName, value) {

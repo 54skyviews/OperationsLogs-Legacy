@@ -415,3 +415,12 @@ input[type="date"] {
   text-align: center;
   font-weight: 700;
 }
+
+.legacy-diagnostic-panel{margin:12px;padding:12px;border:2px solid #8a6d00;border-radius:8px;background:#fffdf2}
+.legacy-diagnostic-summary{padding:9px;margin-bottom:8px;font-weight:800;text-align:center;background:#fff1c9}
+.legacy-summary-ok{background:#dff0e6;color:#174f2b}.legacy-summary-error{background:#f8dddd;color:#7e1c1c}
+.legacy-step{margin:7px 0;font-weight:700}.legacy-step small{display:block;font-weight:400;word-break:break-word}
+.legacy-step-ok:before{content:"✓ ";color:#1a6c36}.legacy-step-working:before{content:"… ";color:#8a6400}
+.legacy-step-waiting:before{content:"○ ";color:#8a6400}.legacy-step-error:before{content:"✗ ";color:#9b1c1c}
+.legacy-diagnostic-error{padding:9px;margin:8px 0;background:#f8dddd;color:#7e1c1c;font-weight:700;word-break:break-word}
+.legacy-diagnostic-technical{white-space:pre-wrap;word-break:break-word;font-size:11px;background:#f4f4f4;padding:8px;border:1px solid #ccc}
