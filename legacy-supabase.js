@@ -17,28 +17,136 @@
   function xhr(method, url, headers, body) {
     return new Promise(function (resolve) {
       var request = new XMLHttpRequest();
-      request.open(method, url, true);
+      var requestBody = body == null ? null : JSON.stringify(body);
+
+      try {
+        request.open(method, url, true);
+      } catch (openError) {
+        if (global.LegacyDiagnostic) {
+          global.LegacyDiagnostic.fail("HTTP request open failed", openError);
+        }
+        resolve({
+          data: null,
+          error: {
+            message: "REQUEST OPEN FAILED",
+            details: { url:url, method:method, original:String(openError) }
+          },
+          status: 0,
+          responseText: ""
+        });
+        return;
+      }
+
       for (var key in headers) {
         if (Object.prototype.hasOwnProperty.call(headers, key)) {
-          request.setRequestHeader(key, headers[key]);
+          try {
+            request.setRequestHeader(key, headers[key]);
+          } catch (headerError) {
+            if (global.LegacyDiagnostic) {
+              global.LegacyDiagnostic.log("HEADER ERROR " + key + ": " + String(headerError));
+            }
+          }
         }
       }
+
+      if (global.LegacyDiagnostic) {
+        global.LegacyDiagnostic.log(method + " " + url);
+        if (requestBody) global.LegacyDiagnostic.log("REQUEST BODY: " + requestBody);
+      }
+
       request.onreadystatechange = function () {
         if (request.readyState !== 4) return;
-        var parsed = parseJson(request.responseText);
+
+        var responseText = request.responseText || "";
+        var parsed = parseJson(responseText);
+
+        if (global.LegacyDiagnostic) {
+          global.LegacyDiagnostic.http(method, url, request.status, responseText);
+        }
+
         if (request.status >= 200 && request.status < 300) {
-          resolve({ data: parsed, error: null, status: request.status });
+          resolve({
+            data: parsed,
+            error: null,
+            status: request.status,
+            responseText: responseText
+          });
         } else {
           var message =
-            (parsed && (parsed.message || parsed.msg || parsed.error_description || parsed.error)) ||
+            (parsed && (
+              parsed.message ||
+              parsed.msg ||
+              parsed.error_description ||
+              parsed.error ||
+              parsed.code
+            )) ||
             ("HTTP " + request.status);
-          resolve({ data: null, error: { message: String(message), status: request.status }, status: request.status });
+
+          resolve({
+            data: null,
+            error: {
+              message: String(message),
+              details: {
+                method: method,
+                url: url,
+                status: request.status,
+                response: parsed || responseText
+              }
+            },
+            status: request.status,
+            responseText: responseText
+          });
         }
       };
+
       request.onerror = function () {
-        resolve({ data: null, error: { message: "NETWORK ERROR" }, status: 0 });
+        if (global.LegacyDiagnostic) {
+          global.LegacyDiagnostic.http(method, url, 0, "NETWORK ERROR");
+        }
+        resolve({
+          data: null,
+          error: {
+            message: "NETWORK ERROR",
+            details: { method:method, url:url, status:0 }
+          },
+          status: 0,
+          responseText: ""
+        });
       };
-      request.send(body == null ? null : JSON.stringify(body));
+
+      request.ontimeout = function () {
+        if (global.LegacyDiagnostic) {
+          global.LegacyDiagnostic.http(method, url, 0, "REQUEST TIMED OUT");
+        }
+        resolve({
+          data: null,
+          error: {
+            message: "REQUEST TIMED OUT",
+            details: { method:method, url:url, status:0 }
+          },
+          status: 0,
+          responseText: ""
+        });
+      };
+
+      request.timeout = 20000;
+
+      try {
+        request.send(requestBody);
+      } catch (sendError) {
+        if (global.LegacyDiagnostic) {
+          global.LegacyDiagnostic.fail("HTTP request send failed", sendError);
+        }
+        resolve({
+          data: null,
+          error: {
+            message: "REQUEST SEND FAILED",
+            details: { method:method, url:url, original:String(sendError) }
+          },
+          status: 0,
+          responseText: ""
+        });
+      }
     });
   }
 
@@ -59,6 +167,7 @@
 
   AuthClient.prototype._normalise = function (payload) {
     if (!payload) return null;
+    if (payload.session && payload.session.access_token) payload = payload.session;
     var expiresIn = Number(payload.expires_in || 3600);
     return {
       access_token: payload.access_token,
@@ -100,25 +209,99 @@
 
   AuthClient.prototype.getSession = function () {
     return this._session().then(function (session) {
+      if (global.LegacyDiagnostic) {
+        global.LegacyDiagnostic.step(
+          "stored-session",
+          "Checking stored device session",
+          session ? "ok" : "working",
+          session ? "Stored session found" : "No stored session; creating one"
+        );
+      }
       return { data: { session: session }, error: null };
     });
   };
 
   AuthClient.prototype.signInAnonymously = function () {
     var self = this;
+    var endpoint = self.client.url + "/auth/v1/signup";
+
+    if (global.LegacyDiagnostic) {
+      global.LegacyDiagnostic.step(
+        "auth",
+        "Creating anonymous Supabase session",
+        "working",
+        "POST /auth/v1/signup"
+      );
+    }
+
     return xhr(
       "POST",
-      self.client.url + "/auth/v1/signup",
+      endpoint,
       {
         "apikey": self.client.key,
-        "Content-Type": "application/json"
+        "Authorization": "Bearer " + self.client.key,
+        "Content-Type": "application/json;charset=UTF-8",
+        "Accept": "application/json"
       },
       {}
     ).then(function (result) {
-      if (result.error) return { data: { user: null, session: null }, error: result.error };
-      var session = self._normalise(result.data);
+      if (result.error) {
+        if (global.LegacyDiagnostic) {
+          global.LegacyDiagnostic.fail("Anonymous authentication failed", result.error);
+        }
+        return {
+          data: { user:null, session:null },
+          error: result.error
+        };
+      }
+
+      var payload = result.data || {};
+      var sessionPayload = payload.session || payload;
+
+      if (!sessionPayload.access_token && payload.access_token) {
+        sessionPayload = payload;
+      }
+
+      if (!sessionPayload.access_token) {
+        var malformed = {
+          message: "AUTH RESPONSE DID NOT INCLUDE ACCESS TOKEN",
+          details: {
+            status: result.status,
+            response: payload
+          }
+        };
+        if (global.LegacyDiagnostic) {
+          global.LegacyDiagnostic.fail("Anonymous authentication response invalid", malformed);
+        }
+        return {
+          data: { user:null, session:null },
+          error: malformed
+        };
+      }
+
+      if (!sessionPayload.user && payload.user) {
+        sessionPayload.user = payload.user;
+      }
+
+      var session = self._normalise(sessionPayload);
       self._write(session);
-      return { data: { user: session && session.user, session: session }, error: null };
+
+      if (global.LegacyDiagnostic) {
+        global.LegacyDiagnostic.step(
+          "auth",
+          "Creating anonymous Supabase session",
+          "ok",
+          session.user && session.user.id ? session.user.id : "access token received"
+        );
+      }
+
+      return {
+        data: {
+          user: session.user,
+          session: session
+        },
+        error: null
+      };
     });
   };
 

@@ -335,3 +335,10 @@ This package is an iOS 10.3.4 compatibility build. It uses:
 - the same Supabase project, administrator accounts and device approvals
 
 Publish it separately from the standard application.
+
+
+## Legacy v1.3.2 Authentication Debug
+
+This build uses direct XMLHttpRequest authentication and records the complete
+HTTP status and response body from Supabase. It also improves formatting of
+JavaScript error objects so diagnostics no longer display only `[object Object]`.

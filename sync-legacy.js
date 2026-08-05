@@ -101,7 +101,7 @@ function askDeviceName() {
     });
 }
 function ensureOperatorSession() {
-    LegacyDiagnostic.step("auth", "Creating or restoring device session", "working", "");
+    LegacyDiagnostic.step("auth", "Creating or restoring device session", "working", "Using direct REST authentication");
     return __awaiter(this, void 0, void 0, function () {
         var sessionData, _a, data, error;
         var _b;
@@ -1206,8 +1206,40 @@ function subscribeRealtime() {
         }
     });
 }
+function legacySupabaseConnectivityProbe() {
+  var url = CLOUD.url + "/auth/v1/settings";
+  return new Promise(function (resolve) {
+    var request = new XMLHttpRequest();
+    try {
+      request.open("GET", url, true);
+      request.setRequestHeader("apikey", CLOUD.publishableKey);
+      request.setRequestHeader("Authorization", "Bearer " + CLOUD.publishableKey);
+      request.onreadystatechange = function () {
+        if (request.readyState !== 4) return;
+        LegacyDiagnostic.http("GET", url, request.status, request.responseText || "");
+        if (request.status >= 200 && request.status < 300) {
+          LegacyDiagnostic.step("probe", "Supabase authentication endpoint reached", "ok", "HTTP " + request.status);
+          resolve(true);
+        } else {
+          LegacyDiagnostic.step("probe", "Supabase authentication endpoint reached", "error", "HTTP " + request.status);
+          resolve(false);
+        }
+      };
+      request.onerror = function () {
+        LegacyDiagnostic.step("probe", "Supabase authentication endpoint reached", "error", "NETWORK ERROR");
+        resolve(false);
+      };
+      request.send(null);
+    } catch (error) {
+      LegacyDiagnostic.fail("Supabase connectivity probe failed", error);
+      resolve(false);
+    }
+  });
+}
+
 function initializeCloudSync() {
     LegacyDiagnostic.step("cloud", "Cloud startup entered", "working", "");
+    LegacyDiagnostic.step("probe", "Supabase authentication endpoint reached", "working", "GET /auth/v1/settings");
     return __awaiter(this, void 0, void 0, function () {
         var flyingDayQueueWasCleaned, adminSession, adminRow, error_4;
         var _a;
@@ -1271,8 +1303,9 @@ function initializeCloudSync() {
                     return [3 /*break*/, 14];
                 case 13:
                     error_4 = _b.sent();
-                    LegacyDiagnostic.fail("Cloud startup failed", arguments[0]);
+                    LegacyDiagnostic.fail("Cloud startup failed", error_2 || error_1 || error);
                     console.error("Cloud startup failed:", error_4);
+                    LegacyDiagnostic.fail("Cloud startup failed", error_4);
                     setSyncStatus(navigator.onLine ? "CLOUD SETUP REQUIRED" : "OFFLINE · LOCAL SAVE", "error");
                     return [3 /*break*/, 14];
                 case 14: return [2 /*return*/];

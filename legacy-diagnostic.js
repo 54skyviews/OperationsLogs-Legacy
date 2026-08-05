@@ -47,8 +47,25 @@
     el.textContent = text;
     el.className = "legacy-diagnostic-summary legacy-summary-" + status;
   }
+  function stringifyError(error) {
+    if (error == null) return "Unknown error";
+    if (typeof error === "string") return error;
+    if (error.message) {
+      try {
+        return error.message + (error.details ? " | " + JSON.stringify(error.details) : "");
+      } catch (ignore) {
+        return error.message;
+      }
+    }
+    try {
+      return JSON.stringify(error);
+    } catch (jsonError) {
+      return String(error);
+    }
+  }
+
   function fail(stage, error) {
-    var message = error && error.message ? error.message : String(error || "Unknown error");
+    var message = stringifyError(error);
     step(stage, stage, "error", message);
     summary("STARTUP FAILED", "error");
     var box = byId("legacyDiagnosticError");
@@ -56,7 +73,19 @@
     log(error && error.stack ? error.stack : message);
   }
 
-  global.LegacyDiagnostic = { step:step, summary:summary, fail:fail, log:log };
+  function http(method, url, status, responseText) {
+    log(method + " " + url + " | HTTP " + status);
+    if (responseText) log("RESPONSE: " + responseText);
+  }
+
+  global.LegacyDiagnostic = {
+    step:step,
+    summary:summary,
+    fail:fail,
+    log:log,
+    http:http,
+    stringifyError:stringifyError
+  };
 
   global.addEventListener("error", function (event) {
     fail("JavaScript error", event.error || event.message);
