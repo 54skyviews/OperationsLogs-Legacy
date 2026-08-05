@@ -1,0 +1,23 @@
+CACHE MANIFEST
+# OperationsLogs Legacy v1.3.0 - build 1
+
+CACHE:
+./
+./index.html
+./styles.css
+./legacy-polyfills.js?v=130L
+./legacy-supabase.js?v=130L
+./supabase-config-legacy.js?v=130L
+./data-legacy.js?v=130L
+./sync-legacy.js?v=130L
+./app-legacy.js?v=130L
+./manifest.webmanifest
+./icon.svg
+https://cdn.sheetjs.com/xlsx-0.18.5/package/dist/xlsx.full.min.js
+
+NETWORK:
+https://vnjpqwhapxbpynwrupsr.supabase.co/
+*
+
+FALLBACK:
+/ ./index.html
