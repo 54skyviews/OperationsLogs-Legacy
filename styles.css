@@ -424,3 +424,16 @@ input[type="date"] {
 .legacy-step-waiting:before{content:"○ ";color:#8a6400}.legacy-step-error:before{content:"✗ ";color:#9b1c1c}
 .legacy-diagnostic-error{padding:9px;margin:8px 0;background:#f8dddd;color:#7e1c1c;font-weight:700;word-break:break-word}
 .legacy-diagnostic-technical{white-space:pre-wrap;word-break:break-word;font-size:11px;background:#f4f4f4;padding:8px;border:1px solid #ccc}
+
+
+/* OperationsLogs Legacy v1.3.4 */
+.legacy-storage-warning {
+  margin: 10px 12px;
+  padding: 10px;
+  border: 2px solid #9b1c1c;
+  border-radius: 8px;
+  background: #f8dddd;
+  color: #7e1c1c;
+  text-align: center;
+  font-weight: 800;
+}

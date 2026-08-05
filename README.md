@@ -350,3 +350,15 @@ The v1.3.2 test proved that anonymous authentication succeeds on iOS 10.3.4.
 This build removes an invalid diagnostic reference to `error_2`, redacts access
 and refresh tokens from future diagnostics, and allows startup to continue into
 device registration and cloud synchronisation.
+
+
+## Legacy v1.3.4
+
+This is the clean operational release for iOS 10.3.4.
+
+- Diagnostic panel and technical logging removed.
+- Working anonymous authentication retained.
+- Device approval and periodic synchronisation retained.
+- Added a clear Private Browsing/storage warning.
+- Local-storage failure no longer causes immediate startup failure; the current
+  session can continue in memory.

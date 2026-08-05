@@ -22,10 +22,7 @@
       try {
         request.open(method, url, true);
       } catch (openError) {
-        if (global.LegacyDiagnostic) {
-          global.LegacyDiagnostic.fail("HTTP request open failed", openError);
-        }
-        resolve({
+resolve({
           data: null,
           error: {
             message: "REQUEST OPEN FAILED",
@@ -42,29 +39,15 @@
           try {
             request.setRequestHeader(key, headers[key]);
           } catch (headerError) {
-            if (global.LegacyDiagnostic) {
-              global.LegacyDiagnostic.log("HEADER ERROR " + key + ": " + String(headerError));
-            }
-          }
+}
         }
       }
-
-      if (global.LegacyDiagnostic) {
-        global.LegacyDiagnostic.log(method + " " + url);
-        if (requestBody) global.LegacyDiagnostic.log("REQUEST BODY: " + requestBody);
-      }
-
-      request.onreadystatechange = function () {
+request.onreadystatechange = function () {
         if (request.readyState !== 4) return;
 
         var responseText = request.responseText || "";
         var parsed = parseJson(responseText);
-
-        if (global.LegacyDiagnostic) {
-          global.LegacyDiagnostic.http(method, url, request.status, responseText);
-        }
-
-        if (request.status >= 200 && request.status < 300) {
+if (request.status >= 200 && request.status < 300) {
           resolve({
             data: parsed,
             error: null,
@@ -100,10 +83,7 @@
       };
 
       request.onerror = function () {
-        if (global.LegacyDiagnostic) {
-          global.LegacyDiagnostic.http(method, url, 0, "NETWORK ERROR");
-        }
-        resolve({
+resolve({
           data: null,
           error: {
             message: "NETWORK ERROR",
@@ -115,10 +95,7 @@
       };
 
       request.ontimeout = function () {
-        if (global.LegacyDiagnostic) {
-          global.LegacyDiagnostic.http(method, url, 0, "REQUEST TIMED OUT");
-        }
-        resolve({
+resolve({
           data: null,
           error: {
             message: "REQUEST TIMED OUT",
@@ -134,10 +111,7 @@
       try {
         request.send(requestBody);
       } catch (sendError) {
-        if (global.LegacyDiagnostic) {
-          global.LegacyDiagnostic.fail("HTTP request send failed", sendError);
-        }
-        resolve({
+resolve({
           data: null,
           error: {
             message: "REQUEST SEND FAILED",
@@ -156,13 +130,30 @@
   }
 
   AuthClient.prototype._read = function () {
-    var raw = localStorage.getItem(this.storageKey);
-    return raw ? parseJson(raw) : null;
+    if (this.memorySession) return this.memorySession;
+    try {
+      var raw = localStorage.getItem(this.storageKey);
+      return raw ? parseJson(raw) : null;
+    } catch (error) {
+      window.OPERATIONSLOGS_STORAGE_UNAVAILABLE = true;
+      var warning = document.getElementById("legacyStorageWarning");
+      if (warning) warning.hidden = false;
+      return this.memorySession || null;
+    }
   };
 
   AuthClient.prototype._write = function (session) {
-    if (session) localStorage.setItem(this.storageKey, JSON.stringify(session));
-    else localStorage.removeItem(this.storageKey);
+    try {
+      if (session) localStorage.setItem(this.storageKey, JSON.stringify(session));
+      else localStorage.removeItem(this.storageKey);
+      return true;
+    } catch (error) {
+      window.OPERATIONSLOGS_STORAGE_UNAVAILABLE = true;
+      var warning = document.getElementById("legacyStorageWarning");
+      if (warning) warning.hidden = false;
+      this.memorySession = session || null;
+      return false;
+    }
   };
 
   AuthClient.prototype._normalise = function (payload) {
@@ -209,32 +200,14 @@
 
   AuthClient.prototype.getSession = function () {
     return this._session().then(function (session) {
-      if (global.LegacyDiagnostic) {
-        global.LegacyDiagnostic.step(
-          "stored-session",
-          "Checking stored device session",
-          session ? "ok" : "working",
-          session ? "Stored session found" : "No stored session; creating one"
-        );
-      }
-      return { data: { session: session }, error: null };
+return { data: { session: session }, error: null };
     });
   };
 
   AuthClient.prototype.signInAnonymously = function () {
     var self = this;
     var endpoint = self.client.url + "/auth/v1/signup";
-
-    if (global.LegacyDiagnostic) {
-      global.LegacyDiagnostic.step(
-        "auth",
-        "Creating anonymous Supabase session",
-        "working",
-        "POST /auth/v1/signup"
-      );
-    }
-
-    return xhr(
+return xhr(
       "POST",
       endpoint,
       {
@@ -246,10 +219,7 @@
       {}
     ).then(function (result) {
       if (result.error) {
-        if (global.LegacyDiagnostic) {
-          global.LegacyDiagnostic.fail("Anonymous authentication failed", result.error);
-        }
-        return {
+return {
           data: { user:null, session:null },
           error: result.error
         };
@@ -270,10 +240,7 @@
             response: payload
           }
         };
-        if (global.LegacyDiagnostic) {
-          global.LegacyDiagnostic.fail("Anonymous authentication response invalid", malformed);
-        }
-        return {
+return {
           data: { user:null, session:null },
           error: malformed
         };
@@ -285,17 +252,7 @@
 
       var session = self._normalise(sessionPayload);
       self._write(session);
-
-      if (global.LegacyDiagnostic) {
-        global.LegacyDiagnostic.step(
-          "auth",
-          "Creating anonymous Supabase session",
-          "ok",
-          session.user && session.user.id ? session.user.id : "access token received"
-        );
-      }
-
-      return {
+return {
         data: {
           user: session.user,
           session: session

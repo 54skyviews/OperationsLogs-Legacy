@@ -38,7 +38,6 @@ var _this = this;
 var operatorSupabase = null;
 var adminSupabase = null;
 var operatorUser = null;
-LegacyDiagnostic.step("auth-complete", "Anonymous session established", "ok", operatorUser && operatorUser.id ? operatorUser.id : "session available");
 var currentDevice = null;
 var adminUser = null;
 var adminAccess = false;
@@ -53,8 +52,7 @@ function cloudAvailable() {
     return Boolean(window.supabase && (CLOUD === null || CLOUD === void 0 ? void 0 : CLOUD.url) && (CLOUD === null || CLOUD === void 0 ? void 0 : CLOUD.publishableKey));
 }
 function makeCloudClients() {
-    LegacyDiagnostic.step("clients", "Creating Supabase clients", "working", "");
-    if (!cloudAvailable())
+if (!cloudAvailable())
         return false;
     operatorSupabase = window.supabase.createClient(CLOUD.url, CLOUD.publishableKey, {
         auth: {
@@ -102,8 +100,7 @@ function askDeviceName() {
     });
 }
 function ensureOperatorSession() {
-    LegacyDiagnostic.step("auth", "Creating or restoring device session", "working", "Using direct REST authentication");
-    return __awaiter(this, void 0, void 0, function () {
+return __awaiter(this, void 0, void 0, function () {
         var sessionData, _a, data, error;
         var _b;
         return __generator(this, function (_c) {
@@ -127,8 +124,7 @@ function ensureOperatorSession() {
     });
 }
 function ensureDeviceRegistration() {
-    LegacyDiagnostic.step("device", "Registering or reading device", "working", "");
-    return __awaiter(this, void 0, void 0, function () {
+return __awaiter(this, void 0, void 0, function () {
         var name, _a, existing, selectError, _b, inserted, insertError;
         return __generator(this, function (_c) {
             switch (_c.label) {
@@ -216,8 +212,7 @@ function refreshCurrentDeviceStatus() {
                     return [3 /*break*/, 5];
                 case 4:
                     if (!isApproved) {
-                        LegacyDiagnostic.step("approval", "Checking device approval", "waiting", "Device awaiting approval");
-                        setSyncStatus("DEVICE WAITING FOR ADMIN APPROVAL", "pending");
+setSyncStatus("DEVICE WAITING FOR ADMIN APPROVAL", "pending");
                     }
                     _b.label = 5;
                 case 5: return [2 /*return*/, currentDevice];
@@ -505,9 +500,7 @@ function updatePendingCount() {
                         setSyncStatus("ONLINE \u00B7 ".concat(pending.length, " WAITING"), "pending");
                         return [2 /*return*/];
                     }
-                    LegacyDiagnostic.step("complete", "Startup complete", "ok", "ONLINE · SYNCED");
-                    LegacyDiagnostic.summary("ONLINE · SYNCED", "ok");
-                    setSyncStatus("ONLINE · SYNCED", "online");
+setSyncStatus("ONLINE · SYNCED", "online");
                     return [2 /*return*/];
             }
         });
@@ -628,8 +621,7 @@ function syncMasterQueueItem(item) {
     });
 }
 function processSyncQueue() {
-    LegacyDiagnostic.step("queue", "Processing local queue", "working", "");
-    return __awaiter(this, void 0, void 0, function () {
+return __awaiter(this, void 0, void 0, function () {
         var items, _i, items_3, item, latest, error_2;
         return __generator(this, function (_a) {
             switch (_a.label) {
@@ -1000,8 +992,7 @@ function pullMasterLists() {
     });
 }
 function pullCloudData() {
-    LegacyDiagnostic.step("download", "Downloading cloud data", "working", "");
-    return __awaiter(this, void 0, void 0, function () {
+return __awaiter(this, void 0, void 0, function () {
         var _a;
         return __generator(this, function (_b) {
             switch (_b.label) {
@@ -1207,41 +1198,9 @@ function subscribeRealtime() {
         }
     });
 }
-function legacySupabaseConnectivityProbe() {
-  var url = CLOUD.url + "/auth/v1/settings";
-  return new Promise(function (resolve) {
-    var request = new XMLHttpRequest();
-    try {
-      request.open("GET", url, true);
-      request.setRequestHeader("apikey", CLOUD.publishableKey);
-      request.setRequestHeader("Authorization", "Bearer " + CLOUD.publishableKey);
-      request.onreadystatechange = function () {
-        if (request.readyState !== 4) return;
-        LegacyDiagnostic.http("GET", url, request.status, request.responseText || "");
-        if (request.status >= 200 && request.status < 300) {
-          LegacyDiagnostic.step("probe", "Supabase authentication endpoint reached", "ok", "HTTP " + request.status);
-          resolve(true);
-        } else {
-          LegacyDiagnostic.step("probe", "Supabase authentication endpoint reached", "error", "HTTP " + request.status);
-          resolve(false);
-        }
-      };
-      request.onerror = function () {
-        LegacyDiagnostic.step("probe", "Supabase authentication endpoint reached", "error", "NETWORK ERROR");
-        resolve(false);
-      };
-      request.send(null);
-    } catch (error) {
-      LegacyDiagnostic.fail("Supabase connectivity probe failed", error);
-      resolve(false);
-    }
-  });
-}
-
 function initializeCloudSync() {
-    LegacyDiagnostic.step("cloud", "Cloud startup entered", "working", "");
-    LegacyDiagnostic.step("probe", "Supabase authentication endpoint reached", "working", "GET /auth/v1/settings");
-    return __awaiter(this, void 0, void 0, function () {
+
+return __awaiter(this, void 0, void 0, function () {
         var flyingDayQueueWasCleaned, adminSession, adminRow, error_4;
         var _a;
         return __generator(this, function (_b) {
@@ -1304,10 +1263,9 @@ function initializeCloudSync() {
                     return [3 /*break*/, 14];
                 case 13:
                     error_4 = _b.sent();
-console.error("Cloud startup failed:", error_4);
-                    LegacyDiagnostic.fail("Cloud startup failed", error_4);
-                    LegacyDiagnostic.fail("Cloud startup failed", error_4);
-                    setSyncStatus(navigator.onLine ? "CLOUD SETUP REQUIRED" : "OFFLINE · LOCAL SAVE", "error");
+console.error("OperationsLogs startup failed:", error_4);
+
+setSyncStatus(navigator.onLine ? "CLOUD SETUP REQUIRED" : "OFFLINE · LOCAL SAVE", "error");
                     return [3 /*break*/, 14];
                 case 14: return [2 /*return*/];
             }

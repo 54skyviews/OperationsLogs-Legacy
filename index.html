@@ -19,7 +19,7 @@
   <header class="app-header">
     <div>
       <h1>OperationsLogs</h1>
-      <p>Gliding operations log — iOS 10 Legacy <span id="appVersion">Legacy v1.3.3 Startup Fix</span></p>
+      <p>Gliding operations log — iOS 10 Legacy <span id="appVersion">Legacy v1.3.4</span></p>
     </div>
     <div id="statusBadge" class="status offline">OFFLINE READY</div>
   </header>
@@ -27,16 +27,12 @@
   <div class="legacy-notice">LEGACY EDITION — iOS 10.3.4 — SYNCHRONISES BY PERIODIC CHECK</div>
   <main>
 
-  <section id="legacyDiagnosticPanel" class="legacy-diagnostic-panel">
-    <h2>Legacy Startup Diagnostic</h2>
-    <div id="legacyDiagnosticSummary" class="legacy-diagnostic-summary">STARTING…</div>
-    <ol id="legacyDiagnosticList"></ol>
-    <div id="legacyDiagnosticError" class="legacy-diagnostic-error" hidden></div>
-    <button type="button" id="legacyDiagnosticButton" class="secondary">SHOW TECHNICAL DETAILS</button>
-    <pre id="legacyDiagnosticTechnical" class="legacy-diagnostic-technical" hidden></pre>
-  </section>
+  <div id="legacyStorageWarning" class="legacy-storage-warning" hidden>
+    PRIVATE BROWSING IS ENABLED OR SAFARI STORAGE IS UNAVAILABLE.
+    OPEN OPERATIONSLOGS IN A NORMAL SAFARI TAB.
+  </div>
 
-    <section id="homeView" class="view active">
+<section id="homeView" class="view active">
       <div class="panel">
         <h2>Flying Day</h2>
         <div class="form-grid">
@@ -211,12 +207,12 @@
     </div>
   </div>
   <script src="https://cdn.sheetjs.com/xlsx-0.18.5/package/dist/xlsx.full.min.js"></script>
-  <script src="legacy-polyfills.js?v=133F"></script>
-  <script src="legacy-diagnostic.js?v=133F"></script>
-  <script src="legacy-supabase.js?v=133F"></script>
-  <script src="supabase-config-legacy.js?v=133F"></script>
-  <script src="sync-legacy.js?v=133F"></script>
-  <script src="data-legacy.js?v=133F"></script>
-  <script src="app-legacy.js?v=133F"></script>
+  <script src="legacy-polyfills.js?v=134"></script>
+  <script src="legacy-storage-check.js?v=134"></script>
+  <script src="legacy-supabase.js?v=134"></script>
+  <script src="supabase-config-legacy.js?v=134"></script>
+  <script src="sync-legacy.js?v=134"></script>
+  <script src="data-legacy.js?v=134"></script>
+  <script src="app-legacy.js?v=134"></script>
 </body>
 </html>
