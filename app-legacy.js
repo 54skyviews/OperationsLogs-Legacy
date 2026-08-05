@@ -1077,6 +1077,8 @@ document.addEventListener("DOMContentLoaded", function () { return __awaiter(_th
                         }
                     });
                 }); });
+                $("winchFlightBtn").addEventListener("click", function () { openEntry("winch"); });
+                $("aerotowFlightBtn").addEventListener("click", function () { openEntry("aerotow"); });
                 $("flightForm").addEventListener("submit", saveFlight);
                 moveFocusWhenChosen("p1", "p2", DATA.names);
                 moveFocusWhenChosen("p2", "payee", __spreadArray(__spreadArray([], DATA.names, true), ["SOLO"], false));
@@ -1183,6 +1185,22 @@ document.addEventListener("DOMContentLoaded", function () { return __awaiter(_th
                         }
                     });
                 }); });
+                document.body.addEventListener("click", function (event) {
+                    var node = event.target;
+                    while (node && node !== document.body) {
+                        if (node.id === "winchFlightBtn") {
+                            event.preventDefault();
+                            openEntry("winch");
+                            return;
+                        }
+                        if (node.id === "aerotowFlightBtn") {
+                            event.preventDefault();
+                            openEntry("aerotow");
+                            return;
+                        }
+                        node = node.parentNode;
+                    }
+                });
                 $("flightList").addEventListener("click", function (e) { return __awaiter(_this, void 0, void 0, function () {
                     var editButton, deleteButton, id;
                     return __generator(this, function (_a) {

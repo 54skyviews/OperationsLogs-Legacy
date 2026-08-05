@@ -362,3 +362,11 @@ This is the clean operational release for iOS 10.3.4.
 - Added a clear Private Browsing/storage warning.
 - Local-storage failure no longer causes immediate startup failure; the current
   session can continue in memory.
+
+
+## Legacy v1.3.5 correction
+
+- Restored the WINCH FLIGHT button click handler.
+- Restored the AEROTOW FLIGHT button click handler.
+- Added an iOS 10-compatible delegated fallback.
+- No Supabase SQL change is required.
