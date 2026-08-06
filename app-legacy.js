@@ -61,6 +61,7 @@ var DB_VERSION = 3;
 var db;
 var currentType = "winch";
 var editingFlightId = null;
+var queueSaveRequested = false;
 var currentAdminList = "names";
 var lastLoadedRunway = "";
 var flyingDayState = {
@@ -74,7 +75,7 @@ var upper = function (value) { return (value || "").trim().replace(/\s+/g, " ").
 var todayISO = function () { return new Date().toISOString().slice(0, 10); };
 var timeHHMM = function () { return new Date().toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" }).replace(":", ""); };
 function openDb() {
-return new Promise(function (resolve, reject) {
+    return new Promise(function (resolve, reject) {
         var request = indexedDB.open(DB_NAME, DB_VERSION);
         request.onupgradeneeded = function (e) {
             var database = e.target.result;
@@ -96,9 +97,7 @@ return new Promise(function (resolve, reject) {
             }
         };
         request.onsuccess = function (e) { db = e.target.result; resolve(db); };
-        request.onerror = function () {
-return reject(request.error);
-        };
+        request.onerror = function () { return reject(request.error); };
     });
 }
 function put(storeName, value) {
@@ -452,18 +451,21 @@ function openEntry(type) {
     $("p2").value = "";
     $("formMessage").textContent = "";
     $("saveFlightBtn").textContent = "SAVE AS AIRBORNE";
+    $("queueFlightBtn").hidden = false;
     document.querySelectorAll(".warning-text").forEach(function (x) { return x.textContent = ""; });
     showView("entryView");
 }
 function saveFlight(e) {
     return __awaiter(this, void 0, void 0, function () {
-        var takeoff, landing, p2Value, isSolo, warnings, date, existing, sameGliderAirborne, now, status, duration, flight, id;
+        var takeoff, landing, savingToQueue, p2Value, isSolo, warnings, date, existing, sameGliderAirborne, now, status, duration, flight, id;
         return __generator(this, function (_a) {
             switch (_a.label) {
                 case 0:
                     e.preventDefault();
                     takeoff = $("takeoff").value, landing = $("landing").value;
-                    if (!isValidHHMM(takeoff)) {
+                    savingToQueue = queueSaveRequested && !editingFlightId;
+                    queueSaveRequested = false;
+                    if (!savingToQueue && !isValidHHMM(takeoff)) {
                         $("formMessage").textContent = "ENTER A VALID FOUR-DIGIT TAKE-OFF TIME.";
                         return [2 /*return*/];
                     }
@@ -510,7 +512,7 @@ function saveFlight(e) {
                     if (sameGliderAirborne && !confirm("".concat(upper($("glider").value), " IS ALREADY SHOWN AS AIRBORNE. SAVE ANOTHER OPEN FLIGHT?")))
                         return [2 /*return*/];
                     now = new Date().toISOString();
-                    status = landing ? "completed" : "airborne";
+                    status = savingToQueue ? "queued" : (landing ? "completed" : "airborne");
                     duration = landing ? calcDuration(takeoff, landing) : "";
                     if (!editingFlightId) return [3 /*break*/, 5];
                     return [4 /*yield*/, get("flights", editingFlightId)];
@@ -544,7 +546,7 @@ function saveFlight(e) {
                         takeoff: takeoff,
                         landing: landing,
                         duration: duration,
-                        takeoffAt: hhmmToDate(date, takeoff),
+                        takeoffAt: takeoff ? hhmmToDate(date, takeoff) : null,
                         landedAt: landing ? hhmmToDate(date, landing) : null,
                         remarks: upper($("remarks").value),
                         aeros: $("aeros").value.trim(),
@@ -602,6 +604,7 @@ function editFlight(id) {
                     $("officeUse").value = flight.officeUse || "";
                     $("formMessage").textContent = "";
                     $("saveFlightBtn").textContent = flight.status === "airborne" ? "SAVE AIRBORNE CHANGES" : "SAVE FLIGHT CHANGES";
+                    $("queueFlightBtn").hidden = true;
                     document.querySelectorAll(".warning-text").forEach(function (x) { return x.textContent = ""; });
                     validateListed("glider", DATA.gliders);
                     validateListed("p1", DATA.names);
@@ -631,7 +634,7 @@ function operationalTimeValue(flight) {
 }
 function updateDashboard() {
     return __awaiter(this, void 0, void 0, function () {
-        var flights, completed, airborne;
+        var flights, completed, queued, airborne;
         return __generator(this, function (_a) {
             switch (_a.label) {
                 case 0:
@@ -641,13 +644,49 @@ function updateDashboard() {
                 case 1:
                     flights = _a.sent();
                     completed = flights.filter(function (f) { return (f.status || "completed") === "completed"; });
+                    queued = flights.filter(function (f) { return f.status === "queued"; }).sort(function (a, b) { return String(a.createdAt || "").localeCompare(String(b.createdAt || "")); });
                     airborne = flights.filter(function (f) { return f.status === "airborne"; }).sort(function (a, b) { return operationalTimeValue(b) - operationalTimeValue(a); });
                     $("winchCount").textContent = flights.filter(function (f) { return f.type === "winch"; }).length;
                     $("aerotowCount").textContent = flights.filter(function (f) { return f.type === "aerotow"; }).length;
                     $("minutesCount").textContent = completed.reduce(function (a, f) { return a + (+f.duration || 0); }, 0);
                     $("warningCount").textContent = flights.reduce(function (a, f) { var _a; return a + (((_a = f.warnings) === null || _a === void 0 ? void 0 : _a.length) || 0); }, 0);
+                    $("queuedCountBadge").textContent = queued.length;
+                    $("queuedList").innerHTML = queued.length ? queued.map(function (f) { return "\n    <article class=\"queued-card\">\n      <h3>".concat(f.glider, " \u00B7 ").concat(f.type.toUpperCase(), "</h3>\n      <p><strong>P1:</strong> ").concat(f.p1, " &nbsp; <strong>P2:</strong> ").concat(f.p2 || "SOLO", "</p>\n      ").concat(f.type === "aerotow" ? "<p><strong>TUG:</strong> ".concat(f.tugReg || "—", " \u00B7 ").concat(f.towHeight || "—", " FT</p>") : "", "\n      <div class=\"airborne-actions\">\n        <button type=\"button\" class=\"takeoff-queued-btn\" data-queue-takeoff=\"").concat(f.id, "\">TAKE OFF NOW</button>\n        <button type=\"button\" class=\"edit-btn\" data-queue-edit=\"").concat(f.id, "\">EDIT</button>\n        <button type=\"button\" class=\"delete-btn\" data-queue-delete=\"").concat(f.id, "\">DELETE</button>\n      </div>\n    </article>"); }).join("") : '<p class="muted">No flights queued.</p>';
                     $("airborneCountBadge").textContent = airborne.length;
                     $("airborneList").innerHTML = airborne.length ? airborne.map(function (f) { return "\n    <article class=\"airborne-card\" data-airborne-id=\"".concat(f.id, "\">\n      <h3>").concat(f.glider, " \u00B7 ").concat(f.type.toUpperCase(), "</h3>\n      <p><strong>P1:</strong> ").concat(f.p1, " &nbsp; <strong>P2:</strong> ").concat(f.p2 || "SOLO", "</p>\n      <p>Took off <strong>").concat(f.takeoff, "</strong></p>\n      <p class=\"elapsed\">").concat(elapsedMinutes(f), " MINUTES AIRBORNE</p>\n      <div class=\"airborne-actions\">\n        <button type=\"button\" class=\"land-btn\" data-land-now=\"").concat(f.id, "\">LAND NOW</button>\n        <button type=\"button\" class=\"manual-land-btn\" data-land-manual=\"").concat(f.id, "\">ENTER TIME</button>\n      </div>\n    </article>"); }).join("") : '<p class="muted">No aircraft currently airborne.</p>';
+                    return [2 /*return*/];
+            }
+        });
+    });
+}
+function takeOffQueuedFlight(id) {
+    return __awaiter(this, void 0, void 0, function () {
+        var flight, takeoff;
+        return __generator(this, function (_a) {
+            switch (_a.label) {
+                case 0: return [4 /*yield*/, get("flights", id)];
+                case 1:
+                    flight = _a.sent();
+                    if (!flight || flight.status !== "queued")
+                        return [2 /*return*/];
+                    takeoff = timeHHMM();
+                    flight.takeoff = takeoff;
+                    flight.takeoffAt = hhmmToDate(flight.date, takeoff);
+                    flight.status = "airborne";
+                    flight.modifiedAt = new Date().toISOString();
+                    flight.syncStatus = "pending";
+                    flight.pendingModifiedAt = flight.modifiedAt;
+                    return [4 /*yield*/, put("flights", flight)];
+                case 2:
+                    _a.sent();
+                    return [4 /*yield*/, queueSyncRecord("flight", id, "upsert")];
+                case 3:
+                    _a.sent();
+                    return [4 /*yield*/, updateDashboard()];
+                case 4:
+                    _a.sent();
+                    if (navigator.onLine && (currentDevice === null || currentDevice === void 0 ? void 0 : currentDevice.approved))
+                        setTimeout(function () { return reconcileCloudState("queued takeoff"); }, 250);
                     return [2 /*return*/];
             }
         });
@@ -707,16 +746,18 @@ function reviewFlights() {
                 case 1:
                     flights = _a.sent();
                     flights.sort(function (a, b) {
-                        var aAirborne = a.status === "airborne" ? 1 : 0;
-                        var bAirborne = b.status === "airborne" ? 1 : 0;
-                        if (aAirborne !== bAirborne)
-                            return bAirborne - aAirborne;
+                        var rank = function (status) { return status === "queued" ? 2 : (status === "airborne" ? 1 : 0); };
+                        var rankDiff = rank(b.status) - rank(a.status);
+                        if (rankDiff)
+                            return rankDiff;
+                        if (a.status === "queued" && b.status === "queued")
+                            return String(a.createdAt || "").localeCompare(String(b.createdAt || ""));
                         return reviewSortTime(b) - reviewSortTime(a);
                     });
                     $("reviewDate").textContent = new Date(date + "T12:00:00").toLocaleDateString("en-GB");
                     $("flightList").innerHTML = flights.length ? flights.map(function (f, i) {
                         var _a, _b;
-                        return "\n    <article class=\"flight-card ".concat(((_a = f.warnings) === null || _a === void 0 ? void 0 : _a.length) ? "warning" : "", "\">\n      <h3>").concat(i + 1, ". ").concat(f.type.toUpperCase(), " \u2014 ").concat(f.glider, "</h3>\n      <p><strong>P1:</strong> ").concat(f.p1, " &nbsp; <strong>P2:</strong> ").concat(f.p2 || "SOLO", "</p>\n      ").concat(f.type === "aerotow" ? "<p><strong>TUG:</strong> ".concat(f.tugReg, " \u2014 ").concat(f.tugPilot, "</p>") : "", "\n      <p><strong>").concat(f.takeoff).concat(f.landing ? "–" + f.landing : " · AIRBORNE", "</strong>").concat(f.status === "airborne" ? " \u00B7 ".concat(elapsedMinutes(f), " MINUTES SO FAR") : " \u00B7 ".concat(f.duration, " MINUTES"), "</p>\n      ").concat(f.remarks ? "<p>".concat(f.remarks, "</p>") : "", "\n      ").concat(((_b = f.warnings) === null || _b === void 0 ? void 0 : _b.length) ? "<span class=\"badge\">".concat(f.warnings.join(" · "), "</span>") : "", "\n      <div class=\"review-actions\">\n        <button type=\"button\" class=\"edit-btn\" data-edit=\"").concat(f.id, "\">EDIT</button>\n        <button type=\"button\" class=\"delete-btn\" data-delete=\"").concat(f.id, "\">DELETE</button>\n      </div>\n    </article>");
+                        return "\n    <article class=\"flight-card ".concat(((_a = f.warnings) === null || _a === void 0 ? void 0 : _a.length) ? "warning" : "", "\">\n      <h3>").concat(i + 1, ". ").concat(f.type.toUpperCase(), " \u2014 ").concat(f.glider, "</h3>\n      <p><strong>P1:</strong> ").concat(f.p1, " &nbsp; <strong>P2:</strong> ").concat(f.p2 || "SOLO", "</p>\n      ").concat(f.type === "aerotow" ? "<p><strong>TUG:</strong> ".concat(f.tugReg, " \u2014 ").concat(f.tugPilot, "</p>") : "", "\n      <p><strong>").concat(f.status === "queued" ? "READY TO LAUNCH" : (f.takeoff + (f.landing ? "–" + f.landing : " · AIRBORNE")), "</strong>").concat(f.status === "airborne" ? " \u00B7 ".concat(elapsedMinutes(f), " MINUTES SO FAR") : (f.status === "queued" ? "" : " \u00B7 ".concat(f.duration, " MINUTES")), "</p>\n      ").concat(f.remarks ? "<p>".concat(f.remarks, "</p>") : "", "\n      ").concat(((_b = f.warnings) === null || _b === void 0 ? void 0 : _b.length) ? "<span class=\"badge\">".concat(f.warnings.join(" · "), "</span>") : "", "\n      <div class=\"review-actions\">\n        <button type=\"button\" class=\"edit-btn\" data-edit=\"").concat(f.id, "\">EDIT</button>\n        <button type=\"button\" class=\"delete-btn\" data-delete=\"").concat(f.id, "\">DELETE</button>\n      </div>\n    </article>");
                     }).join("") : "<p>No flights recorded for this date.</p>";
                     showView("reviewView");
                     return [2 /*return*/];
@@ -978,12 +1019,11 @@ function deleteMasterValue(key, value) {
     });
 }
 document.addEventListener("DOMContentLoaded", function () { return __awaiter(_this, void 0, void 0, function () {
-    var error_2, message;
     var _this = this;
     return __generator(this, function (_a) {
         switch (_a.label) {
             case 0:
-                _a.trys.push([0, 5, , 6]);
+                _a.trys.push([0, , 5, 6]);
                 initialiseLists();
                 wireValidation();
                 return [4 /*yield*/, openDb()];
@@ -1077,8 +1117,14 @@ document.addEventListener("DOMContentLoaded", function () { return __awaiter(_th
                         }
                     });
                 }); });
-                $("winchFlightBtn").addEventListener("click", function () { openEntry("winch"); });
-                $("aerotowFlightBtn").addEventListener("click", function () { openEntry("aerotow"); });
+                $("winchFlightBtn").addEventListener("click", function () { return openEntry("winch"); });
+                $("aerotowFlightBtn").addEventListener("click", function () { return openEntry("aerotow"); });
+                $("queueFlightBtn").addEventListener("click", function () {
+                    queueSaveRequested = true;
+                    var event = document.createEvent("Event");
+                    event.initEvent("submit", true, true);
+                    $("flightForm").dispatchEvent(event);
+                });
                 $("flightForm").addEventListener("submit", saveFlight);
                 moveFocusWhenChosen("p1", "p2", DATA.names);
                 moveFocusWhenChosen("p2", "payee", __spreadArray(__spreadArray([], DATA.names, true), ["SOLO"], false));
@@ -1162,6 +1208,13 @@ document.addEventListener("DOMContentLoaded", function () { return __awaiter(_th
                         }
                     });
                 }); });
+                document.body.addEventListener("click", function (event) {
+                    var launchButton = event.target.closest("#winchFlightBtn, #aerotowFlightBtn");
+                    if (!launchButton)
+                        return;
+                    event.preventDefault();
+                    openEntry(launchButton.id === "winchFlightBtn" ? "winch" : "aerotow");
+                });
                 document.body.addEventListener("click", function (event) { return __awaiter(_this, void 0, void 0, function () {
                     var button, added;
                     return __generator(this, function (_a) {
@@ -1185,22 +1238,6 @@ document.addEventListener("DOMContentLoaded", function () { return __awaiter(_th
                         }
                     });
                 }); });
-                document.body.addEventListener("click", function (event) {
-                    var node = event.target;
-                    while (node && node !== document.body) {
-                        if (node.id === "winchFlightBtn") {
-                            event.preventDefault();
-                            openEntry("winch");
-                            return;
-                        }
-                        if (node.id === "aerotowFlightBtn") {
-                            event.preventDefault();
-                            openEntry("aerotow");
-                            return;
-                        }
-                        node = node.parentNode;
-                    }
-                });
                 $("flightList").addEventListener("click", function (e) { return __awaiter(_this, void 0, void 0, function () {
                     var editButton, deleteButton, id;
                     return __generator(this, function (_a) {
@@ -1235,6 +1272,42 @@ document.addEventListener("DOMContentLoaded", function () { return __awaiter(_th
                         }
                     });
                 }); });
+                $("queuedList").addEventListener("click", function (e) { return __awaiter(_this, void 0, void 0, function () {
+                    var takeoffId, editId, deleteId;
+                    return __generator(this, function (_a) {
+                        switch (_a.label) {
+                            case 0:
+                                takeoffId = e.target.dataset.queueTakeoff;
+                                editId = e.target.dataset.queueEdit;
+                                deleteId = e.target.dataset.queueDelete;
+                                if (!takeoffId) return [3 /*break*/, 2];
+                                return [4 /*yield*/, takeOffQueuedFlight(takeoffId)];
+                            case 1:
+                                _a.sent();
+                                _a.label = 2;
+                            case 2:
+                                if (!editId) return [3 /*break*/, 4];
+                                return [4 /*yield*/, editFlight(editId)];
+                            case 3:
+                                _a.sent();
+                                _a.label = 4;
+                            case 4:
+                                if (!(deleteId && confirm("DELETE THIS QUEUED FLIGHT?"))) return [3 /*break*/, 8];
+                                return [4 /*yield*/, removeFlight(deleteId)];
+                            case 5:
+                                _a.sent();
+                                return [4 /*yield*/, queueSyncRecord("flight", deleteId, "delete")];
+                            case 6:
+                                _a.sent();
+                                return [4 /*yield*/, updateDashboard()];
+                            case 7:
+                                _a.sent();
+                                _a.label = 8;
+                            case 8: return [2 /*return*/];
+                        }
+                    });
+                }); });
+                $("syncNowBtn").addEventListener("click", function () { return reconcileCloudState("manual"); });
                 $("airborneList").addEventListener("click", function (e) { return __awaiter(_this, void 0, void 0, function () {
                     var nowId, manualId, value;
                     return __generator(this, function (_a) {
@@ -1266,15 +1339,17 @@ document.addEventListener("DOMContentLoaded", function () { return __awaiter(_th
                 window.addEventListener("online", updateConnection);
                 window.addEventListener("offline", updateConnection);
                 return [3 /*break*/, 6];
-            case 5:
-                error_2 = _a.sent();
-                console.error(error_2);
-                message = document.getElementById("formMessage");
-                if (message)
-                    message.textContent = "APP STARTUP ERROR: " + error_2.message;
-                alert("OPERATIONSLOGS STARTUP ERROR: " + error_2.message);
-                return [3 /*break*/, 6];
+            case 5: return [7 /*endfinally*/];
             case 6: return [2 /*return*/];
         }
     });
 }); });
+try { }
+catch (error) {
+    console.error(error);
+    var message = document.getElementById("formMessage");
+    if (message)
+        message.textContent = "APP STARTUP ERROR: " + error.message;
+    alert("OPERATIONSLOGS STARTUP ERROR: " + error.message);
+}
+;

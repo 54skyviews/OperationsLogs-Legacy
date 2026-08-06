@@ -324,49 +324,25 @@ administration and export functions are unchanged.
 Run `SUPABASE_1.3.0_PATCH.sql` once before publishing.
 
 
-## OperationsLogs Legacy v1.3.0
-
-This package is an iOS 10.3.4 compatibility build. It uses:
-
-- ES5-transpiled application code
-- a lightweight XMLHttpRequest-based Supabase compatibility layer
-- periodic reconciliation instead of browser Realtime
-- HTML Application Cache instead of service workers
-- the same Supabase project, administrator accounts and device approvals
-
-Publish it separately from the standard application.
-
-
-## Legacy v1.3.2 Authentication Debug
-
-This build uses direct XMLHttpRequest authentication and records the complete
-HTTP status and response body from Supabase. It also improves formatting of
-JavaScript error objects so diagnostics no longer display only `[object Object]`.
-
-
-## Legacy v1.3.3 Startup Fix
-
-The v1.3.2 test proved that anonymous authentication succeeds on iOS 10.3.4.
-This build removes an invalid diagnostic reference to `error_2`, redacts access
-and refresh tokens from future diagnostics, and allows startup to continue into
-device registration and cloud synchronisation.
-
-
-## Legacy v1.3.4
-
-This is the clean operational release for iOS 10.3.4.
-
-- Diagnostic panel and technical logging removed.
-- Working anonymous authentication retained.
-- Device approval and periodic synchronisation retained.
-- Added a clear Private Browsing/storage warning.
-- Local-storage failure no longer causes immediate startup failure; the current
-  session can continue in memory.
-
-
-## Legacy v1.3.5 correction
+## Version 1.3.1 correction
 
 - Restored the WINCH FLIGHT button click handler.
 - Restored the AEROTOW FLIGHT button click handler.
-- Added an iOS 10-compatible delegated fallback.
+- Added a delegated click fallback for browser reliability.
 - No Supabase SQL change is required.
+
+
+## Version 1.4.0 operational improvements
+
+- Added Ready to Launch queued flights.
+- Added TAKE OFF NOW from the queue.
+- Added authoritative selected-day flight reconciliation.
+- Added cloud/device flight-count and airborne verification.
+- Added manual SYNC NOW.
+- Status shows VERIFIED only after a full consistency check.
+- Master lists refresh during every cloud reconciliation.
+
+
+## Legacy v1.4.0
+
+ES5/iOS 10 build with periodic cloud reconciliation and the Legacy Supabase REST facade.

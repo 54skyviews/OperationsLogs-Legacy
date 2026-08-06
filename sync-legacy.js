@@ -47,12 +47,13 @@ var reconciliationTimer = null;
 var lastCloudPullAt = 0;
 var approvalWatcher = null;
 var lastSyncError = "";
+var lastVerification = null;
 var CLOUD = window.OPERATIONSLOGS_SUPABASE;
 function cloudAvailable() {
     return Boolean(window.supabase && (CLOUD === null || CLOUD === void 0 ? void 0 : CLOUD.url) && (CLOUD === null || CLOUD === void 0 ? void 0 : CLOUD.publishableKey));
 }
 function makeCloudClients() {
-if (!cloudAvailable())
+    if (!cloudAvailable())
         return false;
     operatorSupabase = window.supabase.createClient(CLOUD.url, CLOUD.publishableKey, {
         auth: {
@@ -100,7 +101,7 @@ function askDeviceName() {
     });
 }
 function ensureOperatorSession() {
-return __awaiter(this, void 0, void 0, function () {
+    return __awaiter(this, void 0, void 0, function () {
         var sessionData, _a, data, error;
         var _b;
         return __generator(this, function (_c) {
@@ -124,7 +125,7 @@ return __awaiter(this, void 0, void 0, function () {
     });
 }
 function ensureDeviceRegistration() {
-return __awaiter(this, void 0, void 0, function () {
+    return __awaiter(this, void 0, void 0, function () {
         var name, _a, existing, selectError, _b, inserted, insertError;
         return __generator(this, function (_c) {
             switch (_c.label) {
@@ -212,7 +213,7 @@ function refreshCurrentDeviceStatus() {
                     return [3 /*break*/, 5];
                 case 4:
                     if (!isApproved) {
-setSyncStatus("DEVICE WAITING FOR ADMIN APPROVAL", "pending");
+                        setSyncStatus("DEVICE WAITING FOR ADMIN APPROVAL", "pending");
                     }
                     _b.label = 5;
                 case 5: return [2 /*return*/, currentDevice];
@@ -500,7 +501,7 @@ function updatePendingCount() {
                         setSyncStatus("ONLINE \u00B7 ".concat(pending.length, " WAITING"), "pending");
                         return [2 /*return*/];
                     }
-setSyncStatus("ONLINE · SYNCED", "online");
+                    setSyncStatus("ONLINE · SYNCED", "online");
                     return [2 /*return*/];
             }
         });
@@ -621,7 +622,7 @@ function syncMasterQueueItem(item) {
     });
 }
 function processSyncQueue() {
-return __awaiter(this, void 0, void 0, function () {
+    return __awaiter(this, void 0, void 0, function () {
         var items, _i, items_3, item, latest, error_2;
         return __generator(this, function (_a) {
             switch (_a.label) {
@@ -782,6 +783,112 @@ function applyRemoteFlight(row) {
             }
         });
     });
+}
+function reconcileFlightsForDate(date) {
+    return __awaiter(this, void 0, void 0, function () {
+        var _a, data, error, cloudRows, cloudIds, _i, cloudRows_1, row, localRows, _b, localRows_1, local, pending, repairedLocal, cloudById, mismatches, _c, repairedLocal_1, local, remote, pending;
+        return __generator(this, function (_d) {
+            switch (_d.label) {
+                case 0: return [4 /*yield*/, operatorSupabase
+                        .from("flights")
+                        .select("*")
+                        .eq("date", date)];
+                case 1:
+                    _a = _d.sent(), data = _a.data, error = _a.error;
+                    if (error)
+                        throw error;
+                    cloudRows = data || [];
+                    cloudIds = new Set(cloudRows.map(function (row) { return row.id; }));
+                    _i = 0, cloudRows_1 = cloudRows;
+                    _d.label = 2;
+                case 2:
+                    if (!(_i < cloudRows_1.length)) return [3 /*break*/, 5];
+                    row = cloudRows_1[_i];
+                    return [4 /*yield*/, applyRemoteFlight(row)];
+                case 3:
+                    _d.sent();
+                    _d.label = 4;
+                case 4:
+                    _i++;
+                    return [3 /*break*/, 2];
+                case 5: return [4 /*yield*/, getFlightsByDate(date)];
+                case 6:
+                    localRows = _d.sent();
+                    _b = 0, localRows_1 = localRows;
+                    _d.label = 7;
+                case 7:
+                    if (!(_b < localRows_1.length)) return [3 /*break*/, 11];
+                    local = localRows_1[_b];
+                    return [4 /*yield*/, get("syncQueue", "flight:".concat(local.id))];
+                case 8:
+                    pending = _d.sent();
+                    if (!(!cloudIds.has(local.id) && !pending && local.syncStatus !== "pending")) return [3 /*break*/, 10];
+                    return [4 /*yield*/, removeFlight(local.id)];
+                case 9:
+                    _d.sent();
+                    _d.label = 10;
+                case 10:
+                    _b++;
+                    return [3 /*break*/, 7];
+                case 11: return [4 /*yield*/, getFlightsByDate(date)];
+                case 12:
+                    repairedLocal = _d.sent();
+                    cloudById = new Map(cloudRows.map(function (row) { return [row.id, row]; }));
+                    mismatches = 0;
+                    _c = 0, repairedLocal_1 = repairedLocal;
+                    _d.label = 13;
+                case 13:
+                    if (!(_c < repairedLocal_1.length)) return [3 /*break*/, 16];
+                    local = repairedLocal_1[_c];
+                    remote = cloudById.get(local.id);
+                    return [4 /*yield*/, get("syncQueue", "flight:".concat(local.id))];
+                case 14:
+                    pending = _d.sent();
+                    if (pending)
+                        return [3 /*break*/, 15];
+                    if (!remote) {
+                        mismatches++;
+                        return [3 /*break*/, 15];
+                    }
+                    if ((local.status || "") !== (remote.status || "") ||
+                        (local.takeoff || "") !== (remote.takeoff || "") ||
+                        (local.landing || "") !== (remote.landing || ""))
+                        mismatches++;
+                    _d.label = 15;
+                case 15:
+                    _c++;
+                    return [3 /*break*/, 13];
+                case 16:
+                    lastVerification = {
+                        date: date,
+                        cloudCount: cloudRows.length,
+                        localCount: repairedLocal.length,
+                        cloudAirborne: cloudRows.filter(function (r) { return r.status === "airborne"; }).length,
+                        localAirborne: repairedLocal.filter(function (r) { return r.status === "airborne"; }).length,
+                        mismatches: mismatches,
+                        checkedAt: new Date()
+                    };
+                    updateSyncVerificationDisplay();
+                    return [2 /*return*/, lastVerification];
+            }
+        });
+    });
+}
+function updateSyncVerificationDisplay() {
+    var el = document.getElementById("syncVerificationText");
+    if (!el)
+        return;
+    if (!lastVerification) {
+        el.textContent = "Waiting for full check…";
+        return;
+    }
+    var v = lastVerification;
+    var ok = v.cloudCount === v.localCount && v.cloudAirborne === v.localAirborne && v.mismatches === 0;
+    var time = v.checkedAt.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+    el.innerHTML = "<strong>".concat(ok ? "ONLINE · VERIFIED" : "DATA MISMATCH", "</strong><br>") +
+        "Cloud ".concat(v.cloudCount, " flights \u00B7 Device ").concat(v.localCount, " flights \u00B7 ") +
+        "Airborne ".concat(v.localAirborne, "<br>Last full check ").concat(time);
+    el.className = "sync-verification-text ".concat(ok ? "verified" : "mismatch");
 }
 function pullFlights() {
     return __awaiter(this, void 0, void 0, function () {
@@ -992,33 +1099,41 @@ function pullMasterLists() {
     });
 }
 function pullCloudData() {
-return __awaiter(this, void 0, void 0, function () {
-        var _a;
-        return __generator(this, function (_b) {
-            switch (_b.label) {
+    return __awaiter(this, void 0, void 0, function () {
+        var selectedDate;
+        var _a, _b;
+        return __generator(this, function (_c) {
+            switch (_c.label) {
                 case 0:
                     if (!(currentDevice === null || currentDevice === void 0 ? void 0 : currentDevice.approved) || !navigator.onLine)
                         return [2 /*return*/];
                     return [4 /*yield*/, Promise.all([pullFlights(), pullFlyingDays(), pullMasterLists()])];
                 case 1:
-                    _b.sent();
+                    _c.sent();
+                    selectedDate = (_a = document.getElementById("flyingDate")) === null || _a === void 0 ? void 0 : _a.value;
+                    if (!selectedDate) return [3 /*break*/, 3];
+                    return [4 /*yield*/, reconcileFlightsForDate(selectedDate)];
+                case 2:
+                    _c.sent();
+                    _c.label = 3;
+                case 3:
                     lastCloudPullAt = Date.now();
                     return [4 /*yield*/, updateDashboard()];
-                case 2:
-                    _b.sent();
-                    if (!((_a = document.getElementById("reviewView")) === null || _a === void 0 ? void 0 : _a.classList.contains("active"))) return [3 /*break*/, 4];
+                case 4:
+                    _c.sent();
+                    if (!((_b = document.getElementById("reviewView")) === null || _b === void 0 ? void 0 : _b.classList.contains("active"))) return [3 /*break*/, 6];
                     return [4 /*yield*/, reviewFlights()];
-                case 3:
-                    _b.sent();
-                    _b.label = 4;
-                case 4: return [2 /*return*/];
+                case 5:
+                    _c.sent();
+                    _c.label = 6;
+                case 6: return [2 /*return*/];
             }
         });
     });
 }
 function reconcileCloudState() {
     return __awaiter(this, arguments, void 0, function (reason) {
-        var error_3;
+        var verified, error_3;
         if (reason === void 0) { reason = "periodic"; }
         return __generator(this, function (_a) {
             switch (_a.label) {
@@ -1034,7 +1149,11 @@ function reconcileCloudState() {
                     return [4 /*yield*/, pullCloudData()];
                 case 3:
                     _a.sent();
-                    setSyncStatus("ONLINE · SYNCED", "online");
+                    verified = lastVerification &&
+                        lastVerification.cloudCount === lastVerification.localCount &&
+                        lastVerification.cloudAirborne === lastVerification.localAirborne &&
+                        lastVerification.mismatches === 0;
+                    setSyncStatus(verified ? "ONLINE · VERIFIED" : "ONLINE · CHECKING", verified ? "online" : "pending");
                     return [3 /*break*/, 5];
                 case 4:
                     error_3 = _a.sent();
@@ -1085,7 +1204,7 @@ function subscribeRealtime() {
     if (!(currentDevice === null || currentDevice === void 0 ? void 0 : currentDevice.approved) || realtimeChannel)
         return;
     realtimeChannel = operatorSupabase
-        .channel("operationslogs-legacy-polling")
+        .channel("operationslogs-live")
         .on("postgres_changes", { event: "*", schema: "public", table: "flights" }, function (payload) { return __awaiter(_this, void 0, void 0, function () {
         var _a;
         return __generator(this, function (_b) {
@@ -1199,8 +1318,7 @@ function subscribeRealtime() {
     });
 }
 function initializeCloudSync() {
-
-return __awaiter(this, void 0, void 0, function () {
+    return __awaiter(this, void 0, void 0, function () {
         var flyingDayQueueWasCleaned, adminSession, adminRow, error_4;
         var _a;
         return __generator(this, function (_b) {
@@ -1263,9 +1381,8 @@ return __awaiter(this, void 0, void 0, function () {
                     return [3 /*break*/, 14];
                 case 13:
                     error_4 = _b.sent();
-console.error("OperationsLogs startup failed:", error_4);
-
-setSyncStatus(navigator.onLine ? "CLOUD SETUP REQUIRED" : "OFFLINE · LOCAL SAVE", "error");
+                    console.error("Cloud startup failed:", error_4);
+                    setSyncStatus(navigator.onLine ? "CLOUD SETUP REQUIRED" : "OFFLINE · LOCAL SAVE", "error");
                     return [3 /*break*/, 14];
                 case 14: return [2 /*return*/];
             }

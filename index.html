@@ -12,27 +12,21 @@
   <link rel="apple-touch-icon" href="icon.svg">
   <meta name="description" content="Offline-first gliding club operations log">
   <link rel="manifest" href="manifest.webmanifest">
-  <link rel="stylesheet" href="styles.css?v=130">
+  <link rel="stylesheet" href="styles.css?v=140L">
   <title>OperationsLogs</title>
 </head>
 <body>
   <header class="app-header">
     <div>
       <h1>OperationsLogs</h1>
-      <p>Gliding operations log — iOS 10 Legacy <span id="appVersion">Legacy v1.3.5</span></p>
+      <p>Gliding operations log — iOS 10 Legacy <span id="appVersion">Legacy v1.4.0</span></p>
     </div>
     <div id="statusBadge" class="status offline">OFFLINE READY</div>
   </header>
 
   <div class="legacy-notice">LEGACY EDITION — iOS 10.3.4 — SYNCHRONISES BY PERIODIC CHECK</div>
   <main>
-
-  <div id="legacyStorageWarning" class="legacy-storage-warning" hidden>
-    PRIVATE BROWSING IS ENABLED OR SAFARI STORAGE IS UNAVAILABLE.
-    OPEN OPERATIONSLOGS IN A NORMAL SAFARI TAB.
-  </div>
-
-<section id="homeView" class="view active">
+    <section id="homeView" class="view active">
       <div class="panel">
         <h2>Flying Day</h2>
         <div class="form-grid">
@@ -50,6 +44,21 @@
         <button type="button" id="reviewBtn" class="module-button secondary">REVIEW TODAY</button>
         <button type="button" id="exportBtn" class="module-button secondary">EXPORT EXCEL</button>
         <button type="button" id="adminBtn" class="module-button secondary admin-main-button">ADMINISTRATION</button>
+      </div>
+
+      <div class="panel sync-verification-panel">
+        <div class="section-heading">
+          <h2>SYNC VERIFICATION</h2>
+          <button type="button" id="syncNowBtn" class="secondary compact-button">SYNC NOW</button>
+        </div>
+        <div id="syncVerificationText" class="sync-verification-text">Waiting for full check…</div>
+      </div>
+
+      <div class="panel queued-panel">
+        <div class="section-heading">
+          <h2>READY TO LAUNCH <span id="queuedCountBadge" class="count-badge">0</span></h2>
+        </div>
+        <div id="queuedList"><p class="muted">No flights queued.</p></div>
       </div>
 
       <div class="panel airborne-panel">
@@ -120,7 +129,10 @@
           <label>Office use<input id="officeUse" class="uppercase"></label>
 
           <div id="formMessage" class="form-message"></div>
-          <button type="submit" id="saveFlightBtn" class="primary">SAVE AS AIRBORNE</button>
+          <div class="form-action-row">
+            <button type="button" id="queueFlightBtn" class="secondary">SAVE TO READY QUEUE</button>
+            <button type="submit" id="saveFlightBtn" class="primary">SAVE AS AIRBORNE</button>
+          </div>
         </form>
       </div>
     </section>
@@ -207,12 +219,12 @@
     </div>
   </div>
   <script src="https://cdn.sheetjs.com/xlsx-0.18.5/package/dist/xlsx.full.min.js"></script>
-  <script src="legacy-polyfills.js?v=135"></script>
-  <script src="legacy-storage-check.js?v=135"></script>
-  <script src="legacy-supabase.js?v=135"></script>
-  <script src="supabase-config-legacy.js?v=135"></script>
-  <script src="sync-legacy.js?v=135"></script>
-  <script src="data-legacy.js?v=135"></script>
-  <script src="app-legacy.js?v=135"></script>
+  <script src="legacy-polyfills.js?v=140L"></script>
+  <script src="legacy-storage-check.js?v=140L"></script>
+  <script src="legacy-supabase.js?v=140L"></script>
+  <script src="supabase-config-legacy.js?v=140L"></script>
+  <script src="sync-legacy.js?v=140L"></script>
+  <script src="data-legacy.js?v=140L"></script>
+  <script src="app-legacy.js?v=140L"></script>
 </body>
 </html>
