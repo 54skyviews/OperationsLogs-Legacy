@@ -350,3 +350,14 @@ Run `SUPABASE_1.3.0_PATCH.sql` once before publishing.
 - TAKE OFF NOW gives immediate visual feedback while processing.
 - Clear error messages are shown if a queued flight is no longer available locally.
 - No Supabase SQL change is required.
+
+
+## Legacy v1.4.2L
+
+Legacy-only master-list compatibility fix.
+
+- Direct authenticated REST/XHR read for `master_lists`.
+- Immediate refresh of pilot, glider, tug and payee datalists.
+- Additional startup list refresh after device approval.
+- Standard OperationsLogs is unaffected.
+- No Supabase SQL change is required.

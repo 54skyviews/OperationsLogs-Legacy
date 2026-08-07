@@ -1,17 +1,17 @@
 CACHE MANIFEST
-# OperationsLogs Legacy v1.4.1 - build 1
+# OperationsLogs Legacy v1.4.2L - build 1
 
 CACHE:
 ./
 ./index.html
-./styles.css?v=141L
-./legacy-polyfills.js?v=141L
-./legacy-storage-check.js?v=141L
-./legacy-supabase.js?v=141L
-./supabase-config-legacy.js?v=141L
-./data-legacy.js?v=141L
-./sync-legacy.js?v=141L
-./app-legacy.js?v=141L
+./styles.css?v=142L
+./legacy-polyfills.js?v=142L
+./legacy-storage-check.js?v=142L
+./legacy-supabase.js?v=142L
+./supabase-config-legacy.js?v=142L
+./data-legacy.js?v=142L
+./sync-legacy.js?v=142L
+./app-legacy.js?v=142L
 ./manifest.webmanifest
 ./icon.svg
 https://cdn.sheetjs.com/xlsx-0.18.5/package/dist/xlsx.full.min.js
