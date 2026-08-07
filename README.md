@@ -369,3 +369,12 @@ Legacy-only master-list compatibility fix.
 - Text fields remain available for manual/unlisted entries.
 - Fixed the SOLO YES/NO confirmation dialog stacking behind the entry screen.
 - Standard OperationsLogs remains untouched.
+
+
+## Legacy v1.4.4L
+
+- Recovers automatically from empty `masterLists` entries left by earlier Legacy builds.
+- Restores the complete embedded pilot/glider/tug/payee lists immediately.
+- Saves recovered lists back to IndexedDB.
+- Non-empty cloud lists can subsequently replace the recovered local values.
+- Standard OperationsLogs is untouched.

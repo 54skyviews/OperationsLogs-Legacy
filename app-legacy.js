@@ -56,6 +56,13 @@ var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
 };
 var _this = this;
 var DATA = window.OPERATIONSLOGS_MASTER_DATA;
+var LEGACY_EMBEDDED_MASTER_DATA = {
+    names: (DATA.names || []).slice(),
+    gliders: (DATA.gliders || []).slice(),
+    tugAircraft: (DATA.tugAircraft || []).slice(),
+    tugPilots: (DATA.tugPilots || []).slice(),
+    payees: (DATA.payees || []).slice()
+};
 var DB_NAME = "OperationsLogsDB";
 var DB_VERSION = 3;
 var db;
@@ -129,28 +136,45 @@ function cleanMasterValues(values) {
 }
 function loadMasterLists() {
     return __awaiter(this, void 0, void 0, function () {
-        var _i, MASTER_LIST_KEYS_1, key, saved, defaults;
-        var _a;
-        return __generator(this, function (_b) {
-            switch (_b.label) {
+        var i, key, saved, savedValues, defaults, chosen;
+        return __generator(this, function (_a) {
+            switch (_a.label) {
                 case 0:
-                    _i = 0, MASTER_LIST_KEYS_1 = MASTER_LIST_KEYS;
-                    _b.label = 1;
+                    i = 0;
+                    _a.label = 1;
                 case 1:
-                    if (!(_i < MASTER_LIST_KEYS_1.length)) return [3 /*break*/, 4];
-                    key = MASTER_LIST_KEYS_1[_i];
+                    if (!(i < MASTER_LIST_KEYS.length)) return [3 /*break*/, 5];
+                    key = MASTER_LIST_KEYS[i];
                     return [4 /*yield*/, get("masterLists", key)];
                 case 2:
-                    saved = _b.sent();
-                    defaults = Array.isArray(DATA[key]) ? DATA[key] : [];
-                    DATA[key] = cleanMasterValues((_a = saved === null || saved === void 0 ? void 0 : saved.values) !== null && _a !== void 0 ? _a : defaults);
-                    _b.label = 3;
+                    saved = _a.sent();
+                    savedValues = saved && Array.isArray(saved.values) ? saved.values : [];
+                    defaults = Array.isArray(LEGACY_EMBEDDED_MASTER_DATA[key])
+                        ? LEGACY_EMBEDDED_MASTER_DATA[key]
+                        : [];
+
+                    // Earlier Legacy builds could save an empty cloud result. Never allow
+                    // an empty local cache to erase the embedded operational lists.
+                    chosen = savedValues.length ? savedValues : defaults;
+                    DATA[key] = cleanMasterValues(chosen);
+
+                    if (!(savedValues.length === 0 && DATA[key].length > 0)) return [3 /*break*/, 4];
+                    return [4 /*yield*/, put("masterLists", {
+                            key: key,
+                            values: DATA[key],
+                            modifiedAt: new Date().toISOString(),
+                            source: "embedded-recovery"
+                        })];
                 case 3:
-                    _i++;
-                    return [3 /*break*/, 1];
+                    _a.sent();
+                    _a.label = 4;
                 case 4:
-                    if (!DATA.payees.length)
+                    i++;
+                    return [3 /*break*/, 1];
+                case 5:
+                    if (!DATA.payees.length) {
                         DATA.payees = ["P1", "P2", "VOUCHER", "SHARE"];
+                    }
                     refreshMasterDatalists();
                     return [2 /*return*/];
             }

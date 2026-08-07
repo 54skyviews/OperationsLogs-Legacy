@@ -1046,99 +1046,23 @@ function pullFlyingDays() {
         });
     });
 }
-function fetchLegacyMasterListsDirect() {
-    return operatorSupabase.auth.getSession().then(function (sessionResult) {
-        var session = sessionResult && sessionResult.data ? sessionResult.data.session : null;
-        if (!session || !session.access_token) {
-            throw new Error("MASTER LIST READ: NO ACTIVE SESSION");
-        }
-
-        var config = window.OPERATIONSLOGS_SUPABASE || {};
-        var url = String(config.url || "").replace(/\/+$/, "") +
-            "/rest/v1/master_lists?select=list_key%2Cvalue&active=eq.true";
-
-        return new Promise(function (resolve, reject) {
-            var request = new XMLHttpRequest();
-
-            try {
-                request.open("GET", url, true);
-            } catch (error) {
-                reject(new Error("MASTER LIST REQUEST OPEN FAILED: " + String(error)));
-                return;
-            }
-
-            try {
-                request.setRequestHeader("apikey", config.publishableKey || "");
-                request.setRequestHeader("Authorization", "Bearer " + session.access_token);
-                request.setRequestHeader("Accept", "application/json");
-                request.setRequestHeader("Cache-Control", "no-cache, no-store, max-age=0");
-                request.setRequestHeader("Pragma", "no-cache");
-            } catch (headerError) {
-                // Older Safari may reject an optional header; authentication headers above
-                // are attempted first and the request can still proceed.
-            }
-
-            request.timeout = 20000;
-
-            request.onreadystatechange = function () {
-                if (request.readyState !== 4) return;
-
-                if (request.status >= 200 && request.status < 300) {
-                    try {
-                        resolve(request.responseText ? JSON.parse(request.responseText) : []);
-                    } catch (parseError) {
-                        reject(new Error("MASTER LIST RESPONSE COULD NOT BE READ"));
-                    }
-                    return;
-                }
-
-                reject(new Error(
-                    "MASTER LIST HTTP " + request.status + ": " +
-                    String(request.responseText || "").slice(0, 160)
-                ));
-            };
-
-            request.onerror = function () {
-                reject(new Error("MASTER LIST NETWORK ERROR"));
-            };
-
-            request.ontimeout = function () {
-                reject(new Error("MASTER LIST REQUEST TIMED OUT"));
-            };
-
-            try {
-                request.send(null);
-            } catch (sendError) {
-                reject(new Error("MASTER LIST REQUEST FAILED: " + String(sendError)));
-            }
-        });
-    });
-}
 
 function pullMasterLists() {
     return __awaiter(this, arguments, void 0, function (client) {
-        var data, grouped, i, key, r, row, saved;
+        var result, data, error, grouped, i, key, r, row;
         if (client === void 0) { client = operatorSupabase; }
         return __generator(this, function (_a) {
             switch (_a.label) {
-                case 0:
-                    // Administrators may still use the normal client path. Operators on
-                    // iOS 10 use a direct authenticated REST read for maximum compatibility.
-                    if (!(client !== operatorSupabase)) return [3 /*break*/, 2];
-                    return [4 /*yield*/, client
-                            .from("master_lists")
-                            .select("list_key,value")
-                            .eq("active", true)];
+                case 0: return [4 /*yield*/, client
+                        .from("master_lists")
+                        .select("list_key,value")
+                        .eq("active", true)];
                 case 1:
-                    saved = _a.sent();
-                    if (saved.error) throw saved.error;
-                    data = saved.data || [];
-                    return [3 /*break*/, 4];
-                case 2: return [4 /*yield*/, fetchLegacyMasterListsDirect()];
-                case 3:
-                    data = _a.sent();
-                    _a.label = 4;
-                case 4:
+                    result = _a.sent();
+                    data = result.data;
+                    error = result.error;
+                    if (error) throw error;
+
                     grouped = {};
                     for (i = 0; i < MASTER_LIST_KEYS.length; i++) {
                         grouped[MASTER_LIST_KEYS[i]] = [];
@@ -1146,48 +1070,43 @@ function pullMasterLists() {
 
                     for (r = 0; r < (data || []).length; r++) {
                         row = data[r];
-                        if (row && grouped[row.list_key]) {
-                            grouped[row.list_key].push(row.value);
-                        }
+                        if (row && grouped[row.list_key]) grouped[row.list_key].push(row.value);
                     }
 
                     i = 0;
-                    _a.label = 5;
-                case 5:
-                    if (!(i < MASTER_LIST_KEYS.length)) return [3 /*break*/, 8];
+                    _a.label = 2;
+                case 2:
+                    if (!(i < MASTER_LIST_KEYS.length)) return [3 /*break*/, 5];
                     key = MASTER_LIST_KEYS[i];
 
-                    // Never erase a working local list because the cloud list is empty.
-                    if (!grouped[key] || !grouped[key].length) return [3 /*break*/, 7];
+                    // Cloud values replace the local list only when at least one valid
+                    // value is returned. Otherwise retain recovered embedded/local data.
+                    if (!grouped[key] || !grouped[key].length) return [3 /*break*/, 4];
 
                     DATA[key] = cleanMasterValues(grouped[key]);
                     return [4 /*yield*/, put("masterLists", {
                             key: key,
                             values: DATA[key],
-                            modifiedAt: new Date().toISOString()
+                            modifiedAt: new Date().toISOString(),
+                            source: "cloud"
                         })];
-                case 6:
+                case 3:
                     _a.sent();
-                    _a.label = 7;
-                case 7:
+                    _a.label = 4;
+                case 4:
                     i++;
-                    return [3 /*break*/, 5];
-                case 8:
-                    // Crucial on the Legacy build: refresh the actual HTML datalists
-                    // immediately after the cloud values have been saved.
+                    return [3 /*break*/, 2];
+                case 5:
                     refreshMasterDatalists();
-
                     if (document.getElementById("adminView") &&
                         document.getElementById("adminView").classList.contains("active")) {
                         renderAdminList();
                     }
-
                     return [2 /*return*/];
             }
         });
     });
 }
-
 function pullCloudData() {
     return __awaiter(this, void 0, void 0, function () {
         var selectedDate;
