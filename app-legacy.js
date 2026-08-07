@@ -132,7 +132,29 @@ function remove(storeName, key) {
 }
 var MASTER_LIST_KEYS = ["names", "gliders", "tugAircraft", "tugPilots", "payees"];
 function cleanMasterValues(values) {
-    return __spreadArray([], new Set((values || []).map(upper).filter(Boolean)), true).sort(function (a, b) { return a.localeCompare(b, "en-GB"); });
+    var source = values || [];
+    var seen = {};
+    var result = [];
+    var i, value, key;
+
+    for (i = 0; i < source.length; i++) {
+        value = upper(source[i]);
+        if (!value) continue;
+
+        // Use a prefixed object key rather than Set/spread. This is reliable on
+        // Safari/iOS 10 and preserves the same case-insensitive de-duplication.
+        key = "$" + value;
+        if (Object.prototype.hasOwnProperty.call(seen, key)) continue;
+
+        seen[key] = true;
+        result.push(value);
+    }
+
+    result.sort(function (a, b) {
+        return a < b ? -1 : (a > b ? 1 : 0);
+    });
+
+    return result;
 }
 function loadMasterLists() {
     return __awaiter(this, void 0, void 0, function () {
@@ -172,8 +194,25 @@ function loadMasterLists() {
                     i++;
                     return [3 /*break*/, 1];
                 case 5:
+                    // Last-resort Legacy safeguard: the packaged operational
+                    // lists must never disappear merely because an old browser cannot
+                    // process a modern collection construct.
+                    if (!DATA.names.length && LEGACY_EMBEDDED_MASTER_DATA.names.length) {
+                        DATA.names = LEGACY_EMBEDDED_MASTER_DATA.names.slice();
+                    }
+                    if (!DATA.gliders.length && LEGACY_EMBEDDED_MASTER_DATA.gliders.length) {
+                        DATA.gliders = LEGACY_EMBEDDED_MASTER_DATA.gliders.slice();
+                    }
+                    if (!DATA.tugAircraft.length && LEGACY_EMBEDDED_MASTER_DATA.tugAircraft.length) {
+                        DATA.tugAircraft = LEGACY_EMBEDDED_MASTER_DATA.tugAircraft.slice();
+                    }
+                    if (!DATA.tugPilots.length && LEGACY_EMBEDDED_MASTER_DATA.tugPilots.length) {
+                        DATA.tugPilots = LEGACY_EMBEDDED_MASTER_DATA.tugPilots.slice();
+                    }
                     if (!DATA.payees.length) {
-                        DATA.payees = ["P1", "P2", "VOUCHER", "SHARE"];
+                        DATA.payees = LEGACY_EMBEDDED_MASTER_DATA.payees.length
+                            ? LEGACY_EMBEDDED_MASTER_DATA.payees.slice()
+                            : ["P1", "P2", "VOUCHER", "SHARE"];
                     }
                     refreshMasterDatalists();
                     return [2 /*return*/];

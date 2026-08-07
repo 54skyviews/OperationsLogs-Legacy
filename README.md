@@ -378,3 +378,13 @@ Legacy-only master-list compatibility fix.
 - Saves recovered lists back to IndexedDB.
 - Non-empty cloud lists can subsequently replace the recovered local values.
 - Standard OperationsLogs is untouched.
+
+
+## Legacy v1.4.5L
+
+Root-cause fix for empty iOS 10 list selectors.
+
+- Removed transpiled `Set`/spread usage from master-list cleaning.
+- Uses an ES5-safe array/object de-duplication routine.
+- Falls back to packaged master data if an operational list is unexpectedly empty.
+- Standard v1.4.8 remains untouched.
