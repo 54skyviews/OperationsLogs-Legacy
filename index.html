@@ -12,14 +12,14 @@
   <link rel="apple-touch-icon" href="icon.svg">
   <meta name="description" content="Offline-first gliding club operations log">
   <link rel="manifest" href="manifest.webmanifest">
-  <link rel="stylesheet" href="styles.css?v=142L">
+  <link rel="stylesheet" href="styles.css?v=143L">
   <title>OperationsLogs</title>
 </head>
 <body>
   <header class="app-header">
     <div>
       <h1>OperationsLogs</h1>
-      <p>Gliding operations log — iOS 10 Legacy <span id="appVersion">Legacy v1.4.2L</span></p>
+      <p>Gliding operations log — iOS 10 Legacy <span id="appVersion">Legacy v1.4.3L</span></p>
     </div>
     <div id="statusBadge" class="status offline">OFFLINE READY</div>
   </header>
@@ -87,10 +87,12 @@
           <div id="aerotowOnly" class="conditional">
             <label>Tug registration
               <input id="tugReg" class="uppercase" list="tugAircraftList" autocomplete="off">
+            <select id="legacyTugRegSelect" class="legacy-list-select" aria-label="SELECT TUG"><option value="">SELECT TUG</option></select>
               <small class="warning-text" data-warning-for="tugReg"></small>
             </label>
             <label>Tug pilot
               <input id="tugPilot" class="name-input uppercase" list="tugPilotList" autocomplete="off">
+            <select id="legacyTugPilotSelect" class="legacy-list-select" aria-label="SELECT TUG PILOT"><option value="">SELECT TUG PILOT</option></select>
               <small class="warning-text" data-warning-for="tugPilot"></small>
             </label>
             <label>Tow height<input id="towHeight" inputmode="numeric" ></label>
@@ -98,18 +100,22 @@
 
           <label>Glider registration
             <input id="glider" class="uppercase" list="gliderList" autocomplete="off" required>
+            <select id="legacyGliderSelect" class="legacy-list-select" aria-label="SELECT GLIDER"><option value="">SELECT GLIDER</option></select>
             <small class="warning-text" data-warning-for="glider"></small>
           </label>
           <label>P1
             <input id="p1" class="name-input uppercase" list="nameList" autocomplete="off" required>
+            <select id="legacyP1Select" class="legacy-list-select" aria-label="SELECT P1"><option value="">SELECT P1</option></select>
             <small class="warning-text" data-warning-for="p1"></small>
           </label>
           <label>P2
             <input id="p2" class="name-input uppercase" list="nameListWithSolo" autocomplete="off">
+            <select id="legacyP2Select" class="legacy-list-select" aria-label="SELECT P2"><option value="">SELECT P2</option></select>
             <small class="warning-text" data-warning-for="p2"></small>
           </label>
           <label>Payee
             <input id="payee" class="uppercase" list="payeeList" autocomplete="off">
+            <select id="legacyPayeeSelect" class="legacy-list-select" aria-label="SELECT PAYEE"><option value="">SELECT PAYEE</option></select>
           </label>
 
           <div class="time-row">
@@ -219,12 +225,12 @@
     </div>
   </div>
   <script src="https://cdn.sheetjs.com/xlsx-0.18.5/package/dist/xlsx.full.min.js"></script>
-  <script src="legacy-polyfills.js?v=142L"></script>
-  <script src="legacy-storage-check.js?v=142L"></script>
-  <script src="legacy-supabase.js?v=142L"></script>
-  <script src="supabase-config-legacy.js?v=142L"></script>
-  <script src="sync-legacy.js?v=142L"></script>
-  <script src="data-legacy.js?v=142L"></script>
-  <script src="app-legacy.js?v=142L"></script>
+  <script src="legacy-polyfills.js?v=143L"></script>
+  <script src="legacy-storage-check.js?v=143L"></script>
+  <script src="legacy-supabase.js?v=143L"></script>
+  <script src="supabase-config-legacy.js?v=143L"></script>
+  <script src="sync-legacy.js?v=143L"></script>
+  <script src="data-legacy.js?v=143L"></script>
+  <script src="app-legacy.js?v=143L"></script>
 </body>
 </html>

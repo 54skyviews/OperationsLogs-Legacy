@@ -450,3 +450,35 @@ input[type="date"] {
   .form-action-row{display:-webkit-flex;display:flex;-webkit-flex-wrap:wrap;flex-wrap:wrap}
   .form-action-row>*{width:48%;margin-right:2%}
 }
+
+
+/* Legacy v1.4.3L — iOS 10 list selectors */
+.legacy-list-select {
+  display: block;
+  width: 100%;
+  margin-top: 6px;
+  padding: 9px 10px;
+  min-height: 42px;
+  font-size: 16px;
+  border: 1px solid #a9a9a9;
+  border-radius: 6px;
+  background: #fff;
+}
+
+/* Ensure confirmation dialogs are always above entry/admin screens on old Safari. */
+#yesNoDialog,
+.dialog-overlay,
+.modal-overlay {
+  position: fixed !important;
+  z-index: 99999 !important;
+  left: 0;
+  top: 0;
+  right: 0;
+  bottom: 0;
+}
+#yesNoDialog > *,
+.dialog-overlay > *,
+.modal-overlay > * {
+  position: relative;
+  z-index: 100000 !important;
+}

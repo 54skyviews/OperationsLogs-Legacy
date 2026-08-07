@@ -197,6 +197,62 @@ function removeFlight(id) {
 function fillList(id, values) {
     $(id).innerHTML = values.map(function (v) { return "<option value=\"".concat(String(v).replaceAll('"', '&quot;'), "\"></option>"); }).join("");
 }
+function fillLegacySelect(id, values, prompt, includeSolo) {
+    var select = $(id);
+    var items, i, option;
+    if (!select) return;
+
+    items = [];
+    if (includeSolo) items.push("SOLO");
+    for (i = 0; i < values.length; i++) items.push(values[i]);
+
+    select.innerHTML = "";
+    option = document.createElement("option");
+    option.value = "";
+    option.text = prompt;
+    select.appendChild(option);
+
+    for (i = 0; i < items.length; i++) {
+        option = document.createElement("option");
+        option.value = items[i];
+        option.text = items[i];
+        select.appendChild(option);
+    }
+}
+
+function refreshLegacySelectors() {
+    fillLegacySelect("legacyGliderSelect", DATA.gliders || [], "SELECT GLIDER", false);
+    fillLegacySelect("legacyP1Select", DATA.names || [], "SELECT P1", false);
+    fillLegacySelect("legacyP2Select", DATA.names || [], "SELECT P2", true);
+    fillLegacySelect("legacyPayeeSelect", DATA.payees || [], "SELECT PAYEE", false);
+    fillLegacySelect("legacyTugRegSelect", DATA.tugAircraft || [], "SELECT TUG", false);
+    fillLegacySelect("legacyTugPilotSelect", DATA.tugPilots || [], "SELECT TUG PILOT", false);
+}
+
+function wireLegacySelector(selectId, inputId) {
+    var select = $(selectId);
+    var input = $(inputId);
+    if (!select || !input) return;
+
+    select.addEventListener("change", function () {
+        if (!select.value) return;
+        input.value = select.value;
+        try {
+            var event = document.createEvent("HTMLEvents");
+            event.initEvent("change", true, false);
+            input.dispatchEvent(event);
+        } catch (error) {}
+    });
+}
+
+function wireLegacySelectors() {
+    wireLegacySelector("legacyGliderSelect", "glider");
+    wireLegacySelector("legacyP1Select", "p1");
+    wireLegacySelector("legacyP2Select", "p2");
+    wireLegacySelector("legacyPayeeSelect", "payee");
+    wireLegacySelector("legacyTugRegSelect", "tugReg");
+    wireLegacySelector("legacyTugPilotSelect", "tugPilot");
+}
 function refreshMasterDatalists() {
     fillList("nameList", DATA.names);
     fillList("nameListWithSolo", __spreadArray(["SOLO"], DATA.names, true));
@@ -204,6 +260,7 @@ function refreshMasterDatalists() {
     fillList("tugPilotList", DATA.tugPilots);
     fillList("gliderList", DATA.gliders);
     fillList("payeeList", DATA.payees);
+    refreshLegacySelectors();
 }
 function initialiseLists() {
     refreshMasterDatalists();
@@ -443,6 +500,9 @@ function scheduleFlyingDayFieldSave(fieldName) {
     }); }, 500));
 }
 function openEntry(type) {
+    ["legacyGliderSelect","legacyP1Select","legacyP2Select","legacyPayeeSelect","legacyTugRegSelect","legacyTugPilotSelect"].forEach(function (id) {
+        if ($(id)) $(id).value = "";
+    });
     editingFlightId = null;
     currentType = type;
     $("entryTitle").textContent = type === "winch" ? "New Winch Flight" : "New Aerotow Flight";
@@ -1034,6 +1094,7 @@ document.addEventListener("DOMContentLoaded", function () { return __awaiter(_th
             case 0:
                 _a.trys.push([0, , 5, 6]);
                 initialiseLists();
+        wireLegacySelectors();
                 wireValidation();
                 return [4 /*yield*/, openDb()];
             case 1:

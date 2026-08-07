@@ -361,3 +361,11 @@ Legacy-only master-list compatibility fix.
 - Additional startup list refresh after device approval.
 - Standard OperationsLogs is unaffected.
 - No Supabase SQL change is required.
+
+
+## Legacy v1.4.3L
+
+- Added iOS-10-safe native selectors for all cloud-backed lists.
+- Text fields remain available for manual/unlisted entries.
+- Fixed the SOLO YES/NO confirmation dialog stacking behind the entry screen.
+- Standard OperationsLogs remains untouched.
