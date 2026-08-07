@@ -343,6 +343,10 @@ Run `SUPABASE_1.3.0_PATCH.sql` once before publishing.
 - Master lists refresh during every cloud reconciliation.
 
 
-## Legacy v1.4.0
+## Version 1.4.1 queue-button correction
 
-ES5/iOS 10 build with periodic cloud reconciliation and the Legacy Supabase REST facade.
+- SAVE TO READY QUEUE now calls the save workflow directly and no longer depends on requestSubmit().
+- TAKE OFF NOW uses robust delegated button detection.
+- TAKE OFF NOW gives immediate visual feedback while processing.
+- Clear error messages are shown if a queued flight is no longer available locally.
+- No Supabase SQL change is required.

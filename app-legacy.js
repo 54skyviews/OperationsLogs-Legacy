@@ -667,8 +667,17 @@ function takeOffQueuedFlight(id) {
                 case 0: return [4 /*yield*/, get("flights", id)];
                 case 1:
                     flight = _a.sent();
-                    if (!flight || flight.status !== "queued")
+                    if (!flight) {
+                        alert("QUEUED FLIGHT COULD NOT BE FOUND. PRESS SYNC NOW AND TRY AGAIN.");
                         return [2 /*return*/];
+                    }
+                    if (!(flight.status !== "queued")) return [3 /*break*/, 3];
+                    alert("THIS FLIGHT IS NO LONGER IN THE READY QUEUE.");
+                    return [4 /*yield*/, updateDashboard()];
+                case 2:
+                    _a.sent();
+                    return [2 /*return*/];
+                case 3:
                     takeoff = timeHHMM();
                     flight.takeoff = takeoff;
                     flight.takeoffAt = hhmmToDate(flight.date, takeoff);
@@ -677,13 +686,13 @@ function takeOffQueuedFlight(id) {
                     flight.syncStatus = "pending";
                     flight.pendingModifiedAt = flight.modifiedAt;
                     return [4 /*yield*/, put("flights", flight)];
-                case 2:
+                case 4:
                     _a.sent();
                     return [4 /*yield*/, queueSyncRecord("flight", id, "upsert")];
-                case 3:
+                case 5:
                     _a.sent();
                     return [4 /*yield*/, updateDashboard()];
-                case 4:
+                case 6:
                     _a.sent();
                     if (navigator.onLine && (currentDevice === null || currentDevice === void 0 ? void 0 : currentDevice.approved))
                         setTimeout(function () { return reconcileCloudState("queued takeoff"); }, 250);
@@ -1119,12 +1128,19 @@ document.addEventListener("DOMContentLoaded", function () { return __awaiter(_th
                 }); });
                 $("winchFlightBtn").addEventListener("click", function () { return openEntry("winch"); });
                 $("aerotowFlightBtn").addEventListener("click", function () { return openEntry("aerotow"); });
-                $("queueFlightBtn").addEventListener("click", function () {
-                    queueSaveRequested = true;
-                    var event = document.createEvent("Event");
-                    event.initEvent("submit", true, true);
-                    $("flightForm").dispatchEvent(event);
-                });
+                $("queueFlightBtn").addEventListener("click", function (event) { return __awaiter(_this, void 0, void 0, function () {
+                    return __generator(this, function (_a) {
+                        switch (_a.label) {
+                            case 0:
+                                event.preventDefault();
+                                queueSaveRequested = true;
+                                return [4 /*yield*/, saveFlight({ preventDefault: function () { } })];
+                            case 1:
+                                _a.sent();
+                                return [2 /*return*/];
+                        }
+                    });
+                }); });
                 $("flightForm").addEventListener("submit", saveFlight);
                 moveFocusWhenChosen("p1", "p2", DATA.names);
                 moveFocusWhenChosen("p2", "payee", __spreadArray(__spreadArray([], DATA.names, true), ["SOLO"], false));
@@ -1273,37 +1289,53 @@ document.addEventListener("DOMContentLoaded", function () { return __awaiter(_th
                     });
                 }); });
                 $("queuedList").addEventListener("click", function (e) { return __awaiter(_this, void 0, void 0, function () {
-                    var takeoffId, editId, deleteId;
+                    var takeoffButton, editButton, deleteButton, deleteId;
                     return __generator(this, function (_a) {
                         switch (_a.label) {
                             case 0:
-                                takeoffId = e.target.dataset.queueTakeoff;
-                                editId = e.target.dataset.queueEdit;
-                                deleteId = e.target.dataset.queueDelete;
-                                if (!takeoffId) return [3 /*break*/, 2];
-                                return [4 /*yield*/, takeOffQueuedFlight(takeoffId)];
+                                takeoffButton = e.target.closest("[data-queue-takeoff]");
+                                editButton = e.target.closest("[data-queue-edit]");
+                                deleteButton = e.target.closest("[data-queue-delete]");
+                                if (!takeoffButton) return [3 /*break*/, 5];
+                                e.preventDefault();
+                                takeoffButton.disabled = true;
+                                takeoffButton.textContent = "TAKING OFF…";
+                                _a.label = 1;
                             case 1:
-                                _a.sent();
-                                _a.label = 2;
+                                _a.trys.push([1, , 3, 4]);
+                                return [4 /*yield*/, takeOffQueuedFlight(takeoffButton.dataset.queueTakeoff)];
                             case 2:
-                                if (!editId) return [3 /*break*/, 4];
-                                return [4 /*yield*/, editFlight(editId)];
+                                _a.sent();
+                                return [3 /*break*/, 4];
                             case 3:
-                                _a.sent();
-                                _a.label = 4;
-                            case 4:
-                                if (!(deleteId && confirm("DELETE THIS QUEUED FLIGHT?"))) return [3 /*break*/, 8];
-                                return [4 /*yield*/, removeFlight(deleteId)];
+                                if (document.body.contains(takeoffButton)) {
+                                    takeoffButton.disabled = false;
+                                    takeoffButton.textContent = "TAKE OFF NOW";
+                                }
+                                return [7 /*endfinally*/];
+                            case 4: return [2 /*return*/];
                             case 5:
-                                _a.sent();
-                                return [4 /*yield*/, queueSyncRecord("flight", deleteId, "delete")];
+                                if (!editButton) return [3 /*break*/, 7];
+                                e.preventDefault();
+                                return [4 /*yield*/, editFlight(editButton.dataset.queueEdit)];
                             case 6:
                                 _a.sent();
-                                return [4 /*yield*/, updateDashboard()];
+                                return [2 /*return*/];
                             case 7:
+                                if (!(deleteButton && confirm("DELETE THIS QUEUED FLIGHT?"))) return [3 /*break*/, 11];
+                                e.preventDefault();
+                                deleteId = deleteButton.dataset.queueDelete;
+                                return [4 /*yield*/, removeFlight(deleteId)];
+                            case 8:
                                 _a.sent();
-                                _a.label = 8;
-                            case 8: return [2 /*return*/];
+                                return [4 /*yield*/, queueSyncRecord("flight", deleteId, "delete")];
+                            case 9:
+                                _a.sent();
+                                return [4 /*yield*/, updateDashboard()];
+                            case 10:
+                                _a.sent();
+                                _a.label = 11;
+                            case 11: return [2 /*return*/];
                         }
                     });
                 }); });
