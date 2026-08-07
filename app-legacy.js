@@ -69,6 +69,7 @@ var db;
 var currentType = "winch";
 var editingFlightId = null;
 var queueSaveRequested = false;
+var queuedTakeoffBusy = false;
 var currentAdminList = "names";
 var lastLoadedRunway = "";
 var flyingDayState = {
@@ -887,47 +888,113 @@ function updateDashboard() {
         });
     });
 }
-function takeOffQueuedFlight(id) {
-    return __awaiter(this, void 0, void 0, function () {
-        var flight, takeoff;
-        return __generator(this, function (_a) {
-            switch (_a.label) {
-                case 0: return [4 /*yield*/, get("flights", id)];
-                case 1:
-                    flight = _a.sent();
-                    if (!flight) {
-                        alert("QUEUED FLIGHT COULD NOT BE FOUND. PRESS SYNC NOW AND TRY AGAIN.");
-                        return [2 /*return*/];
-                    }
-                    if (!(flight.status !== "queued")) return [3 /*break*/, 3];
-                    alert("THIS FLIGHT IS NO LONGER IN THE READY QUEUE.");
-                    return [4 /*yield*/, updateDashboard()];
-                case 2:
-                    _a.sent();
-                    return [2 /*return*/];
-                case 3:
-                    takeoff = timeHHMM();
-                    flight.takeoff = takeoff;
-                    flight.takeoffAt = hhmmToDate(flight.date, takeoff);
-                    flight.status = "airborne";
-                    flight.modifiedAt = new Date().toISOString();
-                    flight.syncStatus = "pending";
-                    flight.pendingModifiedAt = flight.modifiedAt;
-                    return [4 /*yield*/, put("flights", flight)];
-                case 4:
-                    _a.sent();
-                    return [4 /*yield*/, queueSyncRecord("flight", id, "upsert")];
-                case 5:
-                    _a.sent();
-                    return [4 /*yield*/, updateDashboard()];
-                case 6:
-                    _a.sent();
-                    if (navigator.onLine && (currentDevice === null || currentDevice === void 0 ? void 0 : currentDevice.approved))
-                        setTimeout(function () { return reconcileCloudState("queued takeoff"); }, 250);
-                    return [2 /*return*/];
+function takeOffQueuedFlight(id, button) {
+    if (button === void 0) { button = null; }
+    if (queuedTakeoffBusy) return Promise.resolve(false);
+    queuedTakeoffBusy = true;
+
+    if (!id) {
+        queuedTakeoffBusy = false;
+        alert("READY QUEUE ERROR: FLIGHT ID IS MISSING.");
+        return Promise.resolve(false);
+    }
+
+    if (button) {
+        button.disabled = true;
+        button.textContent = "TAKING OFF...";
+    }
+
+    var takeoff;
+    var now;
+    var flightRef;
+
+    return get("flights", id)
+        .then(function (flight) {
+            if (!flight) {
+                alert("QUEUED FLIGHT COULD NOT BE FOUND. PRESS SYNC NOW AND TRY AGAIN.");
+                return updateDashboard().then(function () { return false; });
             }
+            if (flight.status !== "queued") {
+                alert("THIS FLIGHT IS NO LONGER IN THE READY QUEUE.");
+                return updateDashboard().then(function () { return false; });
+            }
+
+            flightRef = flight;
+            takeoff = timeHHMM();
+            now = new Date().toISOString();
+
+            flight.takeoff = takeoff;
+            flight.takeoffAt = hhmmToDate(flight.date, takeoff);
+            flight.landing = "";
+            flight.landedAt = null;
+            flight.duration = "";
+            flight.status = "airborne";
+            flight.modifiedAt = now;
+            flight.syncStatus = "pending";
+            flight.pendingModifiedAt = now;
+
+            return put("flights", flight)
+                .then(function () { return updateDashboard(); })
+                .then(function () { return queueSyncRecord("flight", id, "upsert"); })
+                .then(function () {
+                    if (!navigator.onLine || !(currentDevice && currentDevice.approved)) {
+                        if (typeof updatePendingCount === "function") updatePendingCount();
+                        return true;
+                    }
+
+                    // Prefer immediate upload when the Legacy sync module exposes it.
+                    if (typeof syncFlightQueueItem === "function") {
+                        return syncFlightQueueItem({
+                            id: "flight:" + id,
+                            recordType: "flight",
+                            recordId: id,
+                            action: "upsert"
+                        }).then(function () {
+                            if (typeof removeQueueItem === "function") {
+                                return removeQueueItem("flight:" + id);
+                            }
+                        }).then(function () {
+                            return reconcileCloudState("queued takeoff verified");
+                        }).then(function () {
+                            return updateDashboard();
+                        }).then(function () {
+                            return true;
+                        });
+                    }
+
+                    // Fallback: existing Legacy queue processor handles the upload.
+                    return processSyncQueue()
+                        .then(function () { return reconcileCloudState("queued takeoff verified"); })
+                        .then(function () { return updateDashboard(); })
+                        .then(function () { return true; });
+                });
+        })
+        .catch(function (error) {
+            console.error("TAKE OFF NOW failed:", error);
+
+            // If the flight reached AIRBORNE locally, preserve it and leave it pending.
+            if (flightRef && flightRef.status === "airborne") {
+                flightRef.syncStatus = "pending";
+                flightRef.pendingModifiedAt =
+                    flightRef.pendingModifiedAt || flightRef.modifiedAt || now;
+                put("flights", flightRef);
+                if (typeof updatePendingCount === "function") updatePendingCount();
+                alert("TAKE-OFF WAS SAVED ON THIS DEVICE BUT IS WAITING TO SYNC.");
+                return true;
+            }
+
+            alert("TAKE OFF NOW ERROR: " +
+                String((error && error.message) || error).toUpperCase().slice(0, 100));
+            return false;
+        })
+        .then(function (result) {
+            queuedTakeoffBusy = false;
+            if (button && document.body.contains(button)) {
+                button.disabled = false;
+                button.textContent = "TAKE OFF NOW";
+            }
+            return result;
         });
-    });
 }
 function landFlight(id, landingTime) {
     return __awaiter(this, void 0, void 0, function () {
@@ -1355,7 +1422,30 @@ document.addEventListener("DOMContentLoaded", function () { return __awaiter(_th
                         }
                     });
                 }); });
-                $("winchFlightBtn").addEventListener("click", function () { return openEntry("winch"); });
+                                document.body.addEventListener("click", function (event) {
+                    var node = event.target;
+                    var targetId;
+                    var target;
+
+                    while (node && node !== document.body) {
+                        if (node.getAttribute && node.getAttribute("data-time-target")) break;
+                        node = node.parentNode;
+                    }
+
+                    if (!node || node === document.body) return;
+
+                    targetId = node.getAttribute("data-time-target");
+                    target = $(targetId);
+                    if (!target) return;
+
+                    event.preventDefault();
+                    target.value = timeHHMM();
+
+                    if (targetId === "landing") {
+                        $("duration").value = calcDuration($("takeoff").value, $("landing").value);
+                    }
+                });
+$("winchFlightBtn").addEventListener("click", function () { return openEntry("winch"); });
                 $("aerotowFlightBtn").addEventListener("click", function () { return openEntry("aerotow"); });
                 $("queueFlightBtn").addEventListener("click", function (event) { return __awaiter(_this, void 0, void 0, function () {
                     return __generator(this, function (_a) {
@@ -1517,82 +1607,82 @@ document.addEventListener("DOMContentLoaded", function () { return __awaiter(_th
                         }
                     });
                 }); });
-                $("queuedList").addEventListener("click", function (e) { return __awaiter(_this, void 0, void 0, function () {
-                    var takeoffButton, editButton, deleteButton, deleteId;
-                    return __generator(this, function (_a) {
-                        switch (_a.label) {
-                            case 0:
-                                takeoffButton = e.target.closest("[data-queue-takeoff]");
-                                editButton = e.target.closest("[data-queue-edit]");
-                                deleteButton = e.target.closest("[data-queue-delete]");
-                                if (!takeoffButton) return [3 /*break*/, 5];
-                                e.preventDefault();
-                                takeoffButton.disabled = true;
-                                takeoffButton.textContent = "TAKING OFF…";
-                                _a.label = 1;
-                            case 1:
-                                _a.trys.push([1, , 3, 4]);
-                                return [4 /*yield*/, takeOffQueuedFlight(takeoffButton.dataset.queueTakeoff)];
-                            case 2:
-                                _a.sent();
-                                return [3 /*break*/, 4];
-                            case 3:
-                                if (document.body.contains(takeoffButton)) {
-                                    takeoffButton.disabled = false;
-                                    takeoffButton.textContent = "TAKE OFF NOW";
-                                }
-                                return [7 /*endfinally*/];
-                            case 4: return [2 /*return*/];
-                            case 5:
-                                if (!editButton) return [3 /*break*/, 7];
-                                e.preventDefault();
-                                return [4 /*yield*/, editFlight(editButton.dataset.queueEdit)];
-                            case 6:
-                                _a.sent();
-                                return [2 /*return*/];
-                            case 7:
-                                if (!(deleteButton && confirm("DELETE THIS QUEUED FLIGHT?"))) return [3 /*break*/, 11];
-                                e.preventDefault();
-                                deleteId = deleteButton.dataset.queueDelete;
-                                return [4 /*yield*/, removeFlight(deleteId)];
-                            case 8:
-                                _a.sent();
-                                return [4 /*yield*/, queueSyncRecord("flight", deleteId, "delete")];
-                            case 9:
-                                _a.sent();
-                                return [4 /*yield*/, updateDashboard()];
-                            case 10:
-                                _a.sent();
-                                _a.label = 11;
-                            case 11: return [2 /*return*/];
+                $("queuedList").addEventListener("click", function (e) {
+                    var node = e.target;
+                    var takeoffButton = null;
+                    var editButton = null;
+                    var deleteButton = null;
+
+                    while (node && node !== $("queuedList")) {
+                        if (node.getAttribute) {
+                            if (node.getAttribute("data-queue-takeoff")) takeoffButton = node;
+                            if (node.getAttribute("data-queue-edit")) editButton = node;
+                            if (node.getAttribute("data-queue-delete")) deleteButton = node;
                         }
-                    });
-                }); });
+                        if (takeoffButton || editButton || deleteButton) break;
+                        node = node.parentNode;
+                    }
+
+                    if (takeoffButton) {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        takeOffQueuedFlight(
+                            takeoffButton.getAttribute("data-queue-takeoff"),
+                            takeoffButton
+                        );
+                        return;
+                    }
+
+                    if (editButton) {
+                        e.preventDefault();
+                        editFlight(editButton.getAttribute("data-queue-edit"));
+                        return;
+                    }
+
+                    if (deleteButton && confirm("DELETE THIS QUEUED FLIGHT?")) {
+                        e.preventDefault();
+                        var deleteId = deleteButton.getAttribute("data-queue-delete");
+                        removeFlight(deleteId)
+                            .then(function () { return remove("syncQueue", "flight:" + deleteId); })
+                            .then(function () { return updateDashboard(); });
+                    }
+                });
                 $("syncNowBtn").addEventListener("click", function () { return reconcileCloudState("manual"); });
-                $("airborneList").addEventListener("click", function (e) { return __awaiter(_this, void 0, void 0, function () {
-                    var nowId, manualId, value;
-                    return __generator(this, function (_a) {
-                        switch (_a.label) {
-                            case 0:
-                                nowId = e.target.dataset.landNow;
-                                manualId = e.target.dataset.landManual;
-                                if (!nowId) return [3 /*break*/, 2];
-                                return [4 /*yield*/, landFlight(nowId, timeHHMM())];
-                            case 1:
-                                _a.sent();
-                                _a.label = 2;
-                            case 2:
-                                if (!manualId) return [3 /*break*/, 4];
-                                value = prompt("ENTER LANDING TIME AS FOUR DIGITS (HHMM):", timeHHMM());
-                                if (!(value !== null)) return [3 /*break*/, 4];
-                                return [4 /*yield*/, landFlight(manualId, value.replace(/\D/g, "").slice(0, 4))];
-                            case 3:
-                                _a.sent();
-                                _a.label = 4;
-                            case 4: return [2 /*return*/];
+                $("airborneList").addEventListener("click", function (e) {
+                    var node = e.target;
+                    var nowButton = null;
+                    var manualButton = null;
+
+                    while (node && node !== $("airborneList")) {
+                        if (node.getAttribute) {
+                            if (node.getAttribute("data-land-now")) nowButton = node;
+                            if (node.getAttribute("data-land-manual")) manualButton = node;
                         }
-                    });
-                }); });
+                        if (nowButton || manualButton) break;
+                        node = node.parentNode;
+                    }
+
+                    if (nowButton) {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        landFlight(nowButton.getAttribute("data-land-now"), timeHHMM());
+                        return;
+                    }
+
+                    if (manualButton) {
+                        e.preventDefault();
+                        var value = prompt(
+                            "ENTER LANDING TIME AS FOUR DIGITS (HHMM):",
+                            timeHHMM()
+                        );
+                        if (value !== null) {
+                            landFlight(
+                                manualButton.getAttribute("data-land-manual"),
+                                value.replace(/\D/g, "").slice(0, 4)
+                            );
+                        }
+                    }
+                });
                 setInterval(function () {
                     if ($("homeView").classList.contains("active"))
                         updateDashboard();

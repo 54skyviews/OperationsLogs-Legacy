@@ -396,3 +396,12 @@ Root-cause fix for empty iOS 10 list selectors.
 - Lists stay open until the operator selects an item or presses Cancel.
 - Manual/unlisted text entry remains available.
 - Standard v1.4.8 remains untouched.
+
+
+## Legacy v1.4.7L
+
+- Ported the proven Standard button reliability fixes to the Legacy branch.
+- TAKE OFF NOW and LAND NOW on the flight-entry form now work.
+- Ready Queue TAKE OFF NOW now persists locally before synchronisation.
+- Airborne LAND NOW and ENTER TIME use old-Safari-safe delegated handling.
+- Standard v1.4.8 remains untouched.
