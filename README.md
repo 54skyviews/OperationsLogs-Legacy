@@ -388,3 +388,11 @@ Root-cause fix for empty iOS 10 list selectors.
 - Uses an ES5-safe array/object de-duplication routine.
 - Falls back to packaged master data if an operational list is unexpectedly empty.
 - Standard v1.4.8 remains untouched.
+
+
+## Legacy v1.4.6L
+
+- Replaced unstable iOS 10 native select popovers with a custom full-screen picker.
+- Lists stay open until the operator selects an item or presses Cancel.
+- Manual/unlisted text entry remains available.
+- Standard v1.4.8 remains untouched.

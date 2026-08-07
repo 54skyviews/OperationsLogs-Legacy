@@ -308,13 +308,118 @@ function wireLegacySelector(selectId, inputId) {
     });
 }
 
+var legacyPickerTargetInput = "";
+var legacyPickerValues = [];
+
+function openLegacyPicker(title, inputId, values, includeSolo) {
+    var overlay = $("legacyPickerOverlay");
+    var list = $("legacyPickerList");
+    var heading = $("legacyPickerTitle");
+    var items = [];
+    var i, button;
+
+    if (!overlay || !list || !heading) return;
+
+    legacyPickerTargetInput = inputId;
+    legacyPickerValues = [];
+
+    if (includeSolo) items.push("SOLO");
+    for (i = 0; i < (values || []).length; i++) items.push(values[i]);
+
+    heading.textContent = title;
+    list.innerHTML = "";
+
+    for (i = 0; i < items.length; i++) {
+        legacyPickerValues.push(items[i]);
+        button = document.createElement("button");
+        button.type = "button";
+        button.className = "legacy-picker-item";
+        button.setAttribute("data-picker-index", String(i));
+        button.appendChild(document.createTextNode(items[i]));
+        list.appendChild(button);
+    }
+
+    overlay.hidden = false;
+    try { document.body.style.overflow = "hidden"; } catch (e) {}
+}
+
+function closeLegacyPicker() {
+    var overlay = $("legacyPickerOverlay");
+    if (overlay) overlay.hidden = true;
+    legacyPickerTargetInput = "";
+    legacyPickerValues = [];
+    try { document.body.style.overflow = ""; } catch (e) {}
+}
+
+function wireLegacyPickerButton(buttonId, title, inputId, valuesFunction, includeSolo) {
+    var button = $(buttonId);
+    if (!button) return;
+
+    button.addEventListener("click", function (event) {
+        event.preventDefault();
+        event.stopPropagation();
+        openLegacyPicker(title, inputId, valuesFunction(), includeSolo);
+    });
+}
+
+function wireLegacyPickerOverlay() {
+    var list = $("legacyPickerList");
+    var cancel = $("legacyPickerCancel");
+
+    if (cancel) {
+        cancel.addEventListener("click", function (event) {
+            event.preventDefault();
+            closeLegacyPicker();
+        });
+    }
+
+    if (list) {
+        list.addEventListener("click", function (event) {
+            var node = event.target;
+            var index, value, input;
+
+            while (node && node !== list && !node.getAttribute("data-picker-index")) {
+                node = node.parentNode;
+            }
+
+            if (!node || node === list) return;
+
+            index = parseInt(node.getAttribute("data-picker-index"), 10);
+            if (isNaN(index) || index < 0 || index >= legacyPickerValues.length) return;
+
+            value = legacyPickerValues[index];
+            input = $(legacyPickerTargetInput);
+            if (input) {
+                input.value = value;
+                try {
+                    var changeEvent = document.createEvent("HTMLEvents");
+                    changeEvent.initEvent("change", true, false);
+                    input.dispatchEvent(changeEvent);
+                } catch (e) {}
+            }
+
+            closeLegacyPicker();
+        });
+    }
+}
+
 function wireLegacySelectors() {
+    // Keep hidden native selects populated as a fallback, but use the custom
+    // picker UI on iOS 10 because native select popovers close immediately.
     wireLegacySelector("legacyGliderSelect", "glider");
     wireLegacySelector("legacyP1Select", "p1");
     wireLegacySelector("legacyP2Select", "p2");
     wireLegacySelector("legacyPayeeSelect", "payee");
     wireLegacySelector("legacyTugRegSelect", "tugReg");
     wireLegacySelector("legacyTugPilotSelect", "tugPilot");
+
+    wireLegacyPickerButton("legacyGliderPickerBtn", "SELECT GLIDER", "glider", function () { return DATA.gliders || []; }, false);
+    wireLegacyPickerButton("legacyP1PickerBtn", "SELECT P1", "p1", function () { return DATA.names || []; }, false);
+    wireLegacyPickerButton("legacyP2PickerBtn", "SELECT P2", "p2", function () { return DATA.names || []; }, true);
+    wireLegacyPickerButton("legacyPayeePickerBtn", "SELECT PAYEE", "payee", function () { return DATA.payees || []; }, false);
+    wireLegacyPickerButton("legacyTugRegPickerBtn", "SELECT TUG", "tugReg", function () { return DATA.tugAircraft || []; }, false);
+    wireLegacyPickerButton("legacyTugPilotPickerBtn", "SELECT TUG PILOT", "tugPilot", function () { return DATA.tugPilots || []; }, false);
+    wireLegacyPickerOverlay();
 }
 function refreshMasterDatalists() {
     fillList("nameList", DATA.names);

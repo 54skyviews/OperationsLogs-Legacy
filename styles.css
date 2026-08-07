@@ -482,3 +482,96 @@ input[type="date"] {
   position: relative;
   z-index: 100000 !important;
 }
+
+
+/* Legacy v1.4.6L — stable custom picker for iOS 10 */
+.legacy-native-select-hidden {
+  display: none !important;
+}
+
+.legacy-picker-button {
+  display: block;
+  width: 100%;
+  margin-top: 6px;
+  padding: 10px 12px;
+  min-height: 42px;
+  font-size: 16px;
+  font-weight: 700;
+  border: 2px solid #1d5b3b;
+  border-radius: 6px;
+  background: #eef7f1;
+  color: #17472f;
+}
+
+.legacy-picker-overlay[hidden] {
+  display: none !important;
+}
+
+.legacy-picker-overlay {
+  position: fixed !important;
+  z-index: 120000 !important;
+  left: 0;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0,0,0,0.45);
+  overflow: hidden;
+}
+
+.legacy-picker-panel {
+  position: absolute;
+  left: 5%;
+  right: 5%;
+  top: 5%;
+  bottom: 5%;
+  background: #ffffff;
+  border: 3px solid #17472f;
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.legacy-picker-heading {
+  height: 54px;
+  padding: 10px 12px;
+  border-bottom: 2px solid #d0d0d0;
+  background: #eef7f1;
+  line-height: 32px;
+}
+
+.legacy-picker-heading strong {
+  font-size: 18px;
+}
+
+.legacy-picker-cancel {
+  float: right;
+  padding: 6px 10px;
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.legacy-picker-list {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 55px;
+  bottom: 0;
+  overflow-y: scroll;
+  -webkit-overflow-scrolling: touch;
+  background: #fff;
+}
+
+.legacy-picker-item {
+  display: block;
+  width: 100%;
+  min-height: 46px;
+  padding: 10px 14px;
+  border: 0;
+  border-bottom: 1px solid #d8d8d8;
+  background: #fff;
+  color: #111;
+  text-align: left;
+  font-size: 17px;
+}
+.legacy-picker-item:active {
+  background: #e6f1ea;
+}
